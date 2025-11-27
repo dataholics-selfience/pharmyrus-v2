@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste API Pharmyrus</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        #logs {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 0;
+        }
+        
+        .log-info { color: #2196F3; }
+        .log-success { color: #4CAF50; }
+        .log-error { color: #f44336; }
+        .log-warning { color: #ff9800; }
+        
+        .api-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        
+        .api-info code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste API Pharmyrus</h1>
+        
+        <div class="api-info">
+            <strong>🌐 Endpoint:</strong> <code id="apiUrl">https://core.pharmyrus.com/api/v1/search</code>
+        </div>
+        
+        <form id="testForm">
+            <div class="form-group">
+                <label for="moleculeName">Nome da Molécula:</label>
+                <input 
+                    type="text" 
+                    id="moleculeName" 
+                    placeholder="Ex: darolutamide, paracetamol, axitinib"
+                    required
+                >
+            </div>
+            
+            <button type="submit" id="submitBtn">
+                🔍 Testar API
+            </button>
+        </form>
+        
+        <div id="logs"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://core.pharmyrus.com/api/v1';
+        const logsDiv = document.getElementById('logs');
+        const form = document.getElementById('testForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const moleculeInput = document.getElementById('moleculeName');
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+        
+        function clearLogs() {
+            logsDiv.innerHTML = '';
+        }
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const moleculeName = moleculeInput.value.trim();
+            if (!moleculeName) {
+                addLog('❌ Por favor, insira o nome da molécula!', 'error');
+                return;
+            }
+            
+            // Clear previous logs
+            clearLogs();
+            
+            // Disable button
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Testando...';
+            
+            addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            addLog('🚀 INICIANDO TESTE DA API', 'info');
+            addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+            addLog(`📝 Molécula: ${moleculeName}`, 'info');
+            addLog(`🌐 Base URL: ${API_BASE_URL}`, 'info');
+            addLog(`🕐 Início: ${new Date().toISOString()}`, 'info');
+            
+            const startTime = Date.now();
+            
+            try {
+                const apiUrl = `${API_BASE_URL}/search?molecule_name=${encodeURIComponent(moleculeName)}`;
+                
+                addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+                addLog('📡 FAZENDO REQUISIÇÃO', 'info');
+                addLog(`🔗 URL: ${apiUrl}`, 'info');
+                addLog('⏳ Aguardando resposta (3-12 minutos)...', 'warning');
+                addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors'
+                });
+                
+                const duration = Math.round((Date.now() - startTime) / 1000);
+                
+                addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'success');
+                addLog('✅ RESPOSTA RECEBIDA', 'success');
+                addLog(`⏱️ Tempo: ${duration}s (${Math.floor(duration/60)}m ${duration%60}s)`, 'success');
+                addLog(`📊 Status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                addLog(`📦 Content-Type: ${response.headers.get('content-type')}`, 'info');
+                addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'success');
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    addLog(`❌ ERRO HTTP ${response.status}`, 'error');
+                    addLog(`Resposta: ${errorText}`, 'error');
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                addLog('📥 Parseando JSON...', 'info');
+                const data = await response.json();
+                
+                addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'success');
+                addLog('✅ JSON PARSEADO COM SUCESSO', 'success');
+                addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'success');
+                
+                // Validate structure
+                addLog('🔍 VALIDANDO ESTRUTURA:', 'info');
+                addLog(`   - executive_summary: ${data.executive_summary ? '✅' : '❌'}`, data.executive_summary ? 'success' : 'error');
+                addLog(`   - search_result: ${data.search_result ? '✅' : '❌'}`, data.search_result ? 'success' : 'error');
+                
+                if (data.search_result) {
+                    addLog(`   - search_result.patents: ${data.search_result.patents ? '✅' : '❌'}`, data.search_result.patents ? 'success' : 'error');
+                    addLog(`   - search_result.molecule: ${data.search_result.molecule ? '✅' : '❌'}`, data.search_result.molecule ? 'success' : 'error');
+                    
+                    if (data.search_result.patents) {
+                        addLog(`   - Número de patentes: ${data.search_result.patents.length}`, 'success');
+                    }
+                    
+                    if (data.search_result.molecule) {
+                        addLog(`   - Nome da molécula: ${data.search_result.molecule.molecule_name}`, 'success');
+                        addLog(`   - CAS: ${data.search_result.molecule.cas_numbers?.[0] || 'N/A'}`, 'success');
+                    }
+                }
+                
+                addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'success');
+                addLog('🎉 TESTE CONCLUÍDO COM SUCESSO!', 'success');
+                addLog(`⏱️ Tempo total: ${Math.floor(duration/60)}m ${duration%60}s`, 'success');
+                addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'success');
+                
+                // Show raw JSON (first 500 chars)
+                const jsonStr = JSON.stringify(data, null, 2);
+                addLog('\n📄 PREVIEW DO JSON (primeiros 500 caracteres):', 'info');
+                addLog(jsonStr.substring(0, 500) + '...', 'info');
+                
+            } catch (error) {
+                const duration = Math.round((Date.now() - startTime) / 1000);
+                
+                addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'error');
+                addLog('❌ ERRO NO TESTE', 'error');
+                addLog(`⏱️ Falhou após: ${duration}s`, 'error');
+                addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'error');
+                addLog(`Tipo: ${error.name}`, 'error');
+                addLog(`Mensagem: ${error.message}`, 'error');
+                
+                // Diagnóstico
+                addLog('\n🔍 DIAGNÓSTICO:', 'warning');
+                
+                if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                    addLog('❌ Erro de conexão - possíveis causas:', 'warning');
+                    addLog('   • API offline ou inacessível', 'warning');
+                    addLog('   • Problema de CORS', 'warning');
+                    addLog('   • Certificado SSL inválido', 'warning');
+                    addLog('   • Firewall bloqueando', 'warning');
+                } else if (error.message.includes('NetworkError')) {
+                    addLog('❌ Erro de rede:', 'warning');
+                    addLog('   • Sem conexão à internet', 'warning');
+                    addLog('   • Timeout da requisição', 'warning');
+                } else if (error.message.includes('JSON')) {
+                    addLog('❌ Erro ao parsear JSON:', 'warning');
+                    addLog('   • Resposta não é JSON válido', 'warning');
+                    addLog('   • API retornou HTML ou texto', 'warning');
+                }
+                
+                addLog('\n💡 SUGESTÕES:', 'info');
+                addLog('1. Abra o DevTools (F12)', 'info');
+                addLog('2. Vá para aba Network', 'info');
+                addLog('3. Tente novamente', 'info');
+                addLog('4. Verifique requisição e resposta', 'info');
+                
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🔍 Testar API';
+            }
+        });
+        
+        // Initial info
+        addLog('✅ Teste pronto! Insira o nome de uma molécula e clique em Testar.', 'success');
+    </script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // V1 COLLECTIONS (mantém exatamente como está)
+    // ============================================
+    
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /invites/{inviteId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    match /contracts/{contractId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /searches/{searchId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // ============================================
+    // V2 COLLECTIONS (NOVAS)
+    // ============================================
+    
+    // Consultas v2 - permissivo para autenticados
+    match /searches_v2/{searchId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Consultas v1 (alias) - caso use outro nome
+    match /consultations_v1/{consultationId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // ============================================
+    // SHARED COLLECTIONS (v1 e v2)
+    // ============================================
+    
+    // Beta codes - leitura para todos autenticados
+    match /betaCodes/{codeId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // ============================================
+    // ADMIN (apenas daniel.mendes@dataholics.io)
+    // ============================================
+    
+    match /admin/{document=**} {
+      allow read, write: if request.auth != null && 
+                           request.auth.token.email == 'daniel.mendes@dataholics.io';
+    }
+    
+    // ============================================
+    // FALLBACK - permite tudo para autenticados
+    // ============================================
+    
+    // Qualquer outra collection não especificada
+    // Permite leitura/escrita para usuários autenticados
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

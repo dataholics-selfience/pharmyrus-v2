@@ -1,0 +1,15 @@
+{
+  "name": "pharmyrus-v2-functions",
+  "version": "2.0.0",
+  "description": "Netlify Functions for Pharmyrus v2 API Proxy",
+  "main": "netlify/functions/api-search.js",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"No tests specified\""
+  },
+  "author": "Pharmyrus/Dataholics",
+  "license": "MIT"
+}
