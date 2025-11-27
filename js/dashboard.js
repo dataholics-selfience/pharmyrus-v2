@@ -236,15 +236,15 @@ async function performSearch() {
         console.log('📤 ETAPA 1: INICIANDO BUSCA ASSÍNCRONA');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
-        const initResponse = await fetch(`${API_BASE_URL}/search`, {
+        const initUrl = `${API_BASE_URL}/search/async?molecule_name=${encodeURIComponent(moleculeName)}`;
+        console.log('🔗 URL:', initUrl);
+        
+        const initResponse = await fetch(initUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                molecule_name: moleculeName
-            })
+            }
         });
         
         if (!initResponse.ok) {
@@ -263,7 +263,8 @@ async function performSearch() {
         console.log('🆔 Task ID:', taskId);
         console.log('📊 Status inicial:', initData.status || 'processing');
         console.log('⏱️ Tempo estimado:', initData.estimated_time || '10-30 minutos');
-        console.log('🔗 Poll URL:', initData.poll_url || `${API_BASE_URL}/search/status/${taskId}`);
+        console.log('🔗 Status URL:', `${API_BASE_URL}/search/async/${taskId}/status`);
+        console.log('🔗 Result URL:', `${API_BASE_URL}/search/async/${taskId}/result`);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
         // ========================================
@@ -273,25 +274,25 @@ async function performSearch() {
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log('🔄 ETAPA 2: INICIANDO POLLING');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('⏱️ Intervalo: 10 segundos');
+        console.log('⏱️ Intervalo: 40 segundos (para não sobrecarregar servidor)');
         console.log('🎯 Verificando status até completar...');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
         let data = null;
         let pollCount = 0;
-        const maxPolls = 300; // 50 minutos máximo (300 * 10s)
+        const maxPolls = 75; // 50 minutos máximo (75 * 40s)
         
         while (pollCount < maxPolls) {
             pollCount++;
             
-            // Aguarda 10 segundos antes de verificar (exceto primeira vez)
+            // Aguarda 40 segundos antes de verificar (exceto primeira vez)
             if (pollCount > 1) {
-                await new Promise(resolve => setTimeout(resolve, 10000));
+                await new Promise(resolve => setTimeout(resolve, 40000));
             }
             
             console.log(`🔍 Poll #${pollCount} - Verificando status...`);
             
-            const statusResponse = await fetch(`${API_BASE_URL}/search/status/${taskId}`, {
+            const statusResponse = await fetch(`${API_BASE_URL}/search/async/${taskId}/status`, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json'
@@ -329,13 +330,24 @@ async function performSearch() {
                 console.log('✅ BUSCA COMPLETADA!');
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                 console.log('⏱️ Total de polls:', pollCount);
-                console.log('📊 Resultado recebido!');
+                console.log('📥 Buscando resultado completo...');
                 
-                if (!statusData.result) {
-                    throw new Error('API retornou completed mas sem result');
+                // Busca resultado do endpoint separado
+                const resultResponse = await fetch(`${API_BASE_URL}/search/async/${taskId}/result`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!resultResponse.ok) {
+                    const errorText = await resultResponse.text().catch(() => 'Sem detalhes');
+                    throw new Error(`Erro ao buscar resultado: ${resultResponse.status} - ${errorText}`);
                 }
                 
-                data = statusData.result;
+                data = await resultResponse.json();
+                console.log('✅ Resultado obtido com sucesso!');
+                console.log('📊 Estrutura:', Object.keys(data));
                 break;
             }
             
@@ -1001,14 +1013,17 @@ function displayMoleculeCard(molecule) {
     if (!moleculeCard) return;
     
     moleculeCard.innerHTML = `
+        <h3 class="pd-card-title">
+            <i class="fas fa-atom"></i> Informações da Molécula
+        </h3>
         <div class="molecule-header">
-            <h3>${molecule.generic_name || molecule.molecule_name}</h3>
+            <h4>${molecule.generic_name || molecule.molecule_name}</h4>
             ${molecule.commercial_name ? `<span class="molecule-subtitle">${molecule.commercial_name}</span>` : ''}
         </div>
         <div class="molecule-details">
             <div class="detail-row">
                 <span class="detail-label">Nome IUPAC:</span>
-                <span class="detail-value">${truncateText(molecule.iupac_name || '-', 60)}</span>
+                <span class="detail-value">${truncateText(molecule.iupac_name || '-', 80)}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Fórmula Molecular:</span>
@@ -1024,7 +1039,8 @@ function displayMoleculeCard(molecule) {
             </div>
             ${molecule.structure_2d_url ? `
                 <div class="molecule-structure">
-                    <img src="${molecule.structure_2d_url}" alt="Estrutura 2D" />
+                    <h5 style="margin-bottom: 10px;">Estrutura 2D</h5>
+                    <img src="${molecule.structure_2d_url}" alt="Estrutura 2D" style="max-width: 100%; border-radius: 8px;" />
                 </div>
             ` : ''}
         </div>
@@ -1039,7 +1055,8 @@ function displayPatentsTable(patents, isFiltering = false) {
     
     // Store all patents globally only on first load (not during filtering)
     if (!isFiltering) {
-        window.allPatents = patents || [];
+        // Armazena patentes ordenadas
+        window.allPatents = sortedPatents || [];
         window.filteredPatents = [...window.allPatents];
     }
     
@@ -1051,10 +1068,50 @@ function displayPatentsTable(patents, isFiltering = false) {
         return;
     }
     
-    // Display patents (up to 50)
-    const patentsToShow = patents.slice(0, 50);
+    // ========================================
+    // 📊 ORDENAR PATENTES POR FONTE
+    // ========================================
+    // Ordem de prioridade:
+    // 1. INPI (BR)
+    // 2. WIPO
+    // 3. EPO
+    // 4. USPTO (US)
+    // 5. Google Patents (outros)
     
-    patentsToShow.forEach(patent => {
+    const sourceOrder = {
+        'INPI': 1,
+        'WIPO': 2,
+        'EPO': 3,
+        'USPTO': 4,
+        'Google Patents': 5,
+        'Outro': 6
+    };
+    
+    const sortedPatents = [...patents].sort((a, b) => {
+        // Detectar fonte de cada patente
+        const getSourcePriority = (patent) => {
+            if (patent.publication_number) {
+                if (patent.publication_number.startsWith('BR')) return sourceOrder['INPI'];
+                if (patent.publication_number.startsWith('WO')) return sourceOrder['WIPO'];
+                if (patent.publication_number.startsWith('EP')) return sourceOrder['EPO'];
+                if (patent.publication_number.startsWith('US')) return sourceOrder['USPTO'];
+            }
+            if (patent.jurisdiction === 'BR') return sourceOrder['INPI'];
+            if (patent.jurisdiction === 'WO') return sourceOrder['WIPO'];
+            if (patent.jurisdiction === 'EP') return sourceOrder['EPO'];
+            if (patent.jurisdiction === 'US') return sourceOrder['USPTO'];
+            return sourceOrder['Google Patents'];
+        };
+        
+        const priorityA = getSourcePriority(a);
+        const priorityB = getSourcePriority(b);
+        
+        return priorityA - priorityB;
+    });
+    
+    console.log(`📋 Renderizando ${sortedPatents.length} patentes (ordenadas por fonte)...`);
+    
+    sortedPatents.forEach(patent => {
         const row = document.createElement('tr');
         
         // Detectar fonte da patente baseado nos metadados
@@ -1122,7 +1179,20 @@ function displayPatentsTable(patents, isFiltering = false) {
             <td>${patent.jurisdiction || '-'}</td>
             <td><span class="status-badge status-${getStatusClass(patent.legal_status)}">${patent.legal_status || 'Unknown'}</span></td>
             <td>
-                <button class="btn btn-primary btn-small" onclick="viewPatentDetails('${patent.publication_number}')">Ver</button>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn btn-primary btn-small" onclick="viewPatentDetails('${patent.publication_number}'); return false;" title="Ver detalhes">
+                        <i class="fas fa-eye"></i> Ver
+                    </button>
+                    ${patent.source_url || patent.google_patents_url ? `
+                        <a href="${patent.source_url || patent.google_patents_url || `https://patents.google.com/patent/${patent.publication_number}/en`}" 
+                           target="_blank" 
+                           class="btn btn-secondary btn-small" 
+                           title="Abrir patente original"
+                           style="padding: 8px 12px;">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    ` : ''}
+                </div>
             </td>
         `;
         tbody.appendChild(row);
@@ -1131,7 +1201,7 @@ function displayPatentsTable(patents, isFiltering = false) {
     // Update filter stats
     updateFilterStats();
     
-    console.log(`✅ Displayed ${patentsToShow.length} patents`);
+    console.log(`✅ Displayed ${sortedPatents.length} patents (ordenadas: INPI > WIPO > EPO > USPTO > Outros)`);
 }
 
 function displayPdTab(data) {
@@ -1282,15 +1352,52 @@ async function loadUserHistory() {
         recentSearches.forEach(data => {
             const item = document.createElement('div');
             item.className = 'history-item';
+            
+            // Criar mini viewer 3D para cada item
+            const miniViewerId = `mini-viewer-${data.id}`;
+            
             item.innerHTML = `
+                <div class="history-molecule-icon">
+                    <div id="${miniViewerId}" class="mini-3d-viewer"></div>
+                </div>
                 <div class="history-content">
-                    <h4>${data.moleculeName}</h4>
-                    <p>${data.totalPatents} patentes • ${data.totalFamilies} famílias</p>
+                    <h4>${data.moleculeName || 'Molécula'}</h4>
+                    ${data.commercialName ? `<p class="commercial-name"><i class="fas fa-tag"></i> ${data.commercialName}</p>` : ''}
+                    <p class="history-stats">${data.totalPatents} patentes • ${data.totalFamilies} famílias</p>
                     <small>${formatDateTime(data.timestamp?.toDate())}</small>
                 </div>
-                <button class="btn btn-secondary btn-small" onclick="reloadSearch('${data.id}')">Carregar</button>
+                <button class="btn btn-secondary btn-small" onclick="reloadSearch('${data.id}')">
+                    <i class="fas fa-redo"></i> Carregar
+                </button>
             `;
             historyList.appendChild(item);
+            
+            // Inicializar mini viewer 3D se houver SMILES
+            if (data.smiles && window.$3Dmol) {
+                setTimeout(() => {
+                    const miniViewer = document.getElementById(miniViewerId);
+                    if (miniViewer) {
+                        const viewer = $3Dmol.createViewer(miniViewer, {
+                            backgroundColor: 'white'
+                        });
+                        
+                        $3Dmol.download(`cid:${data.smiles}`, viewer, {}, () => {
+                            viewer.setStyle({}, {stick: {colorscheme: 'Jmol'}});
+                            viewer.zoomTo();
+                            viewer.zoom(0.8);
+                            viewer.render();
+                            
+                            // Animação de rotação
+                            let angle = 0;
+                            setInterval(() => {
+                                angle += 1;
+                                viewer.rotate(1, 'y');
+                                viewer.render();
+                            }, 50);
+                        });
+                    }
+                }, 100);
+            }
         });
         
     } catch (error) {
@@ -2051,7 +2158,7 @@ window.viewPatentDetails = function(publicationNumber) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📝 Número:', publicationNumber);
     console.log('🔍 window.allPatents:', window.allPatents ? `${window.allPatents.length} patentes` : 'undefined');
-    console.log('🔍 currentResults:', currentResults ? `${currentResults.patents?.length || 0} patentes` : 'undefined');
+    console.log('🔍 currentResults:', currentResults ? `${currentResults.search_result?.patents?.length || 0} patentes` : 'undefined');
     
     // Find patent in stored patents (from window.allPatents first)
     let patent = null;
@@ -2062,15 +2169,21 @@ window.viewPatentDetails = function(publicationNumber) {
         patent = window.allPatents.find(p => p.publication_number === publicationNumber);
         if (patent) {
             console.log('✅ Encontrada em window.allPatents');
+            console.log('📋 Patente:', {
+                number: patent.publication_number,
+                title: patent.title?.substring(0, 50),
+                jurisdiction: patent.jurisdiction,
+                status: patent.legal_status
+            });
         }
     }
     
     // Fallback to currentResults
-    if (!patent && currentResults?.patents) {
-        console.log('🔎 Procurando em currentResults.patents...');
-        patent = currentResults.patents.find(p => p.publication_number === publicationNumber);
+    if (!patent && currentResults?.search_result?.patents) {
+        console.log('🔎 Procurando em currentResults.search_result.patents...');
+        patent = currentResults.search_result.patents.find(p => p.publication_number === publicationNumber);
         if (patent) {
-            console.log('✅ Encontrada em currentResults.patents');
+            console.log('✅ Encontrada em currentResults.search_result.patents');
         }
     }
     
@@ -2264,11 +2377,26 @@ window.viewPatentDetails = function(publicationNumber) {
             
             <!-- Links -->
             <div style="background: #0f172a; padding: 20px; border-radius: 12px;">
-                <h3 style="color: #60a5fa; margin-top: 0;">Links Externos</h3>
+                <h3 style="color: #60a5fa; margin-top: 0;"><i class="fas fa-link"></i> Links Externos</h3>
                 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    ${patent.source_url ? `
+                        <a href="${patent.source_url}" target="_blank" style="
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            text-decoration: none;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 8px;
+                            font-weight: 600;
+                        ">
+                            <i class="fas fa-file-alt"></i> Ver Patente Original
+                        </a>
+                    ` : ''}
                     ${patent.espacenet_url ? `
                         <a href="${patent.espacenet_url}" target="_blank" style="
-                            background: #3b82f6;
+                            background: #8b5cf6;
                             color: white;
                             padding: 10px 20px;
                             border-radius: 8px;
@@ -2282,7 +2410,7 @@ window.viewPatentDetails = function(publicationNumber) {
                     ` : ''}
                     ${patent.google_patents_url ? `
                         <a href="${patent.google_patents_url}" target="_blank" style="
-                            background: #3b82f6;
+                            background: #ef4444;
                             color: white;
                             padding: 10px 20px;
                             border-radius: 8px;
@@ -2306,6 +2434,20 @@ window.viewPatentDetails = function(publicationNumber) {
                             gap: 8px;
                         ">
                             <i class="fas fa-external-link-alt"></i> WIPO
+                        </a>
+                    ` : ''}
+                    ${!patent.source_url && !patent.google_patents_url && patent.publication_number ? `
+                        <a href="https://patents.google.com/patent/${patent.publication_number}/en" target="_blank" style="
+                            background: #ef4444;
+                            color: white;
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            text-decoration: none;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 8px;
+                        ">
+                            <i class="fas fa-external-link-alt"></i> Buscar no Google Patents
                         </a>
                     ` : ''}
                 </div>
