@@ -1053,23 +1053,8 @@ function displayPatentsTable(patents, isFiltering = false) {
     const tbody = document.getElementById('patentsTableBody');
     if (!tbody) return;
     
-    // Store all patents globally only on first load (not during filtering)
-    if (!isFiltering) {
-        // Armazena patentes ordenadas
-        window.allPatents = sortedPatents || [];
-        window.filteredPatents = [...window.allPatents];
-    }
-    
-    tbody.innerHTML = '';
-    
-    if (!patents || patents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma patente encontrada</td></tr>';
-        updateFilterStats();
-        return;
-    }
-    
     // ========================================
-    // 📊 ORDENAR PATENTES POR FONTE
+    // 📊 ORDENAR PATENTES POR FONTE (ANTES DE TUDO)
     // ========================================
     // Ordem de prioridade:
     // 1. INPI (BR)
@@ -1087,7 +1072,7 @@ function displayPatentsTable(patents, isFiltering = false) {
         'Outro': 6
     };
     
-    const sortedPatents = [...patents].sort((a, b) => {
+    const sortedPatents = patents && patents.length > 0 ? [...patents].sort((a, b) => {
         // Detectar fonte de cada patente
         const getSourcePriority = (patent) => {
             if (patent.publication_number) {
@@ -1107,7 +1092,22 @@ function displayPatentsTable(patents, isFiltering = false) {
         const priorityB = getSourcePriority(b);
         
         return priorityA - priorityB;
-    });
+    }) : [];
+    
+    // Store all patents globally only on first load (not during filtering)
+    if (!isFiltering) {
+        // Armazena patentes ordenadas
+        window.allPatents = sortedPatents || [];
+        window.filteredPatents = [...window.allPatents];
+    }
+    
+    tbody.innerHTML = '';
+    
+    if (!sortedPatents || sortedPatents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma patente encontrada</td></tr>';
+        updateFilterStats();
+        return;
+    }
     
     console.log(`📋 Renderizando ${sortedPatents.length} patentes (ordenadas por fonte)...`);
     
@@ -1353,12 +1353,9 @@ async function loadUserHistory() {
             const item = document.createElement('div');
             item.className = 'history-item';
             
-            // Criar mini viewer 3D para cada item
-            const miniViewerId = `mini-viewer-${data.id}`;
-            
             item.innerHTML = `
                 <div class="history-molecule-icon">
-                    <div id="${miniViewerId}" class="mini-3d-viewer"></div>
+                    <i class="fas fa-atom" style="font-size: 32px; color: white;"></i>
                 </div>
                 <div class="history-content">
                     <h4>${data.moleculeName || 'Molécula'}</h4>
@@ -1371,33 +1368,6 @@ async function loadUserHistory() {
                 </button>
             `;
             historyList.appendChild(item);
-            
-            // Inicializar mini viewer 3D se houver SMILES
-            if (data.smiles && window.$3Dmol) {
-                setTimeout(() => {
-                    const miniViewer = document.getElementById(miniViewerId);
-                    if (miniViewer) {
-                        const viewer = $3Dmol.createViewer(miniViewer, {
-                            backgroundColor: 'white'
-                        });
-                        
-                        $3Dmol.download(`cid:${data.smiles}`, viewer, {}, () => {
-                            viewer.setStyle({}, {stick: {colorscheme: 'Jmol'}});
-                            viewer.zoomTo();
-                            viewer.zoom(0.8);
-                            viewer.render();
-                            
-                            // Animação de rotação
-                            let angle = 0;
-                            setInterval(() => {
-                                angle += 1;
-                                viewer.rotate(1, 'y');
-                                viewer.render();
-                            }, 50);
-                        });
-                    }
-                }, 100);
-            }
         });
         
     } catch (error) {
