@@ -1826,6 +1826,37 @@ body {
     overflow: hidden;
 }
 
+/* Animated atom with rotation and pulse */
+.animated-atom {
+    animation: atomPulse 2s ease-in-out infinite;
+}
+
+.animated-atom i {
+    animation: atomRotate 8s linear infinite;
+    display: inline-block;
+}
+
+@keyframes atomRotate {
+    0% {
+        transform: rotateY(0deg) rotateZ(0deg);
+    }
+    50% {
+        transform: rotateY(180deg) rotateZ(180deg);
+    }
+    100% {
+        transform: rotateY(360deg) rotateZ(360deg);
+    }
+}
+
+@keyframes atomPulse {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+    50% {
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6), 0 0 30px rgba(102, 126, 234, 0.4);
+    }
+}
+
 .mini-3d-viewer {
     width: 100%;
     height: 100%;
