@@ -1013,17 +1013,14 @@ function displayMoleculeCard(molecule) {
     if (!moleculeCard) return;
     
     moleculeCard.innerHTML = `
-        <h3 class="pd-card-title">
-            <i class="fas fa-atom"></i> Informações da Molécula
-        </h3>
         <div class="molecule-header">
-            <h4>${molecule.generic_name || molecule.molecule_name}</h4>
+            <h3>${molecule.generic_name || molecule.molecule_name}</h3>
             ${molecule.commercial_name ? `<span class="molecule-subtitle">${molecule.commercial_name}</span>` : ''}
         </div>
         <div class="molecule-details">
             <div class="detail-row">
                 <span class="detail-label">Nome IUPAC:</span>
-                <span class="detail-value">${truncateText(molecule.iupac_name || '-', 80)}</span>
+                <span class="detail-value">${truncateText(molecule.iupac_name || '-', 60)}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Fórmula Molecular:</span>
@@ -1039,8 +1036,7 @@ function displayMoleculeCard(molecule) {
             </div>
             ${molecule.structure_2d_url ? `
                 <div class="molecule-structure">
-                    <h5 style="margin-bottom: 10px;">Estrutura 2D</h5>
-                    <img src="${molecule.structure_2d_url}" alt="Estrutura 2D" style="max-width: 100%; border-radius: 8px;" />
+                    <img src="${molecule.structure_2d_url}" alt="Estrutura 2D" />
                 </div>
             ` : ''}
         </div>
@@ -1053,16 +1049,16 @@ function displayPatentsTable(patents, isFiltering = false) {
     const tbody = document.getElementById('patentsTableBody');
     if (!tbody) return;
     
-    // ========================================
-    // 📊 ORDENAR PATENTES POR FONTE (ANTES DE TUDO)
-    // ========================================
-    // Ordem de prioridade:
-    // 1. INPI (BR)
-    // 2. WIPO
-    // 3. EPO
-    // 4. USPTO (US)
-    // 5. Google Patents (outros)
+    if (!patents || patents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma patente encontrada</td></tr>';
+        updateFilterStats();
+        return;
+    }
     
+    // ========================================
+    // 📊 ORDENAR PATENTES POR FONTE
+    // ========================================
+    // Ordem de prioridade: INPI > WIPO > EPO > USPTO > Outros
     const sourceOrder = {
         'INPI': 1,
         'WIPO': 2,
@@ -1072,44 +1068,35 @@ function displayPatentsTable(patents, isFiltering = false) {
         'Outro': 6
     };
     
-    const sortedPatents = patents && patents.length > 0 ? [...patents].sort((a, b) => {
-        // Detectar fonte de cada patente
-        const getSourcePriority = (patent) => {
-            if (patent.publication_number) {
-                if (patent.publication_number.startsWith('BR')) return sourceOrder['INPI'];
-                if (patent.publication_number.startsWith('WO')) return sourceOrder['WIPO'];
-                if (patent.publication_number.startsWith('EP')) return sourceOrder['EPO'];
-                if (patent.publication_number.startsWith('US')) return sourceOrder['USPTO'];
-            }
-            if (patent.jurisdiction === 'BR') return sourceOrder['INPI'];
-            if (patent.jurisdiction === 'WO') return sourceOrder['WIPO'];
-            if (patent.jurisdiction === 'EP') return sourceOrder['EPO'];
-            if (patent.jurisdiction === 'US') return sourceOrder['USPTO'];
-            return sourceOrder['Google Patents'];
-        };
-        
+    const getSourcePriority = (patent) => {
+        if (patent.publication_number) {
+            if (patent.publication_number.startsWith('BR')) return sourceOrder['INPI'];
+            if (patent.publication_number.startsWith('WO')) return sourceOrder['WIPO'];
+            if (patent.publication_number.startsWith('EP')) return sourceOrder['EPO'];
+            if (patent.publication_number.startsWith('US')) return sourceOrder['USPTO'];
+        }
+        if (patent.jurisdiction === 'BR') return sourceOrder['INPI'];
+        if (patent.jurisdiction === 'WO') return sourceOrder['WIPO'];
+        if (patent.jurisdiction === 'EP') return sourceOrder['EPO'];
+        if (patent.jurisdiction === 'US') return sourceOrder['USPTO'];
+        return sourceOrder['Google Patents'];
+    };
+    
+    const sortedPatents = [...patents].sort((a, b) => {
         const priorityA = getSourcePriority(a);
         const priorityB = getSourcePriority(b);
-        
         return priorityA - priorityB;
-    }) : [];
+    });
     
     // Store all patents globally only on first load (not during filtering)
     if (!isFiltering) {
-        // Armazena patentes ordenadas
         window.allPatents = sortedPatents || [];
         window.filteredPatents = [...window.allPatents];
     }
     
     tbody.innerHTML = '';
     
-    if (!sortedPatents || sortedPatents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma patente encontrada</td></tr>';
-        updateFilterStats();
-        return;
-    }
-    
-    console.log(`📋 Renderizando ${sortedPatents.length} patentes (ordenadas por fonte)...`);
+    console.log(`📋 Renderizando ${sortedPatents.length} patentes (ordenadas: INPI > WIPO > EPO > USPTO > Outros)...`);
     
     sortedPatents.forEach(patent => {
         const row = document.createElement('tr');
@@ -1179,20 +1166,7 @@ function displayPatentsTable(patents, isFiltering = false) {
             <td>${patent.jurisdiction || '-'}</td>
             <td><span class="status-badge status-${getStatusClass(patent.legal_status)}">${patent.legal_status || 'Unknown'}</span></td>
             <td>
-                <div style="display: flex; gap: 5px;">
-                    <button class="btn btn-primary btn-small" onclick="viewPatentDetails('${patent.publication_number}'); return false;" title="Ver detalhes">
-                        <i class="fas fa-eye"></i> Ver
-                    </button>
-                    ${patent.source_url || patent.google_patents_url ? `
-                        <a href="${patent.source_url || patent.google_patents_url || `https://patents.google.com/patent/${patent.publication_number}/en`}" 
-                           target="_blank" 
-                           class="btn btn-secondary btn-small" 
-                           title="Abrir patente original"
-                           style="padding: 8px 12px;">
-                            <i class="fas fa-external-link-alt"></i>
-                        </a>
-                    ` : ''}
-                </div>
+                <button class="btn btn-primary btn-small" onclick="viewPatentDetails('${patent.publication_number}')">Ver</button>
             </td>
         `;
         tbody.appendChild(row);
@@ -1201,7 +1175,7 @@ function displayPatentsTable(patents, isFiltering = false) {
     // Update filter stats
     updateFilterStats();
     
-    console.log(`✅ Displayed ${sortedPatents.length} patents (ordenadas: INPI > WIPO > EPO > USPTO > Outros)`);
+    console.log(`✅ Displayed ${patents.length} patents (todas carregadas)`);
 }
 
 function displayPdTab(data) {
@@ -1352,13 +1326,12 @@ async function loadUserHistory() {
         recentSearches.forEach(data => {
             const item = document.createElement('div');
             item.className = 'history-item';
-            
             item.innerHTML = `
                 <div class="history-molecule-icon">
                     <i class="fas fa-atom" style="font-size: 32px; color: white;"></i>
                 </div>
                 <div class="history-content">
-                    <h4>${data.moleculeName || 'Molécula'}</h4>
+                    <h4>${data.moleculeName}</h4>
                     ${data.commercialName ? `<p class="commercial-name"><i class="fas fa-tag"></i> ${data.commercialName}</p>` : ''}
                     <p class="history-stats">${data.totalPatents} patentes • ${data.totalFamilies} famílias</p>
                     <small>${formatDateTime(data.timestamp?.toDate())}</small>
@@ -2128,7 +2101,7 @@ window.viewPatentDetails = function(publicationNumber) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📝 Número:', publicationNumber);
     console.log('🔍 window.allPatents:', window.allPatents ? `${window.allPatents.length} patentes` : 'undefined');
-    console.log('🔍 currentResults:', currentResults ? `${currentResults.search_result?.patents?.length || 0} patentes` : 'undefined');
+    console.log('🔍 currentResults:', currentResults ? `${currentResults.patents?.length || 0} patentes` : 'undefined');
     
     // Find patent in stored patents (from window.allPatents first)
     let patent = null;
@@ -2139,21 +2112,15 @@ window.viewPatentDetails = function(publicationNumber) {
         patent = window.allPatents.find(p => p.publication_number === publicationNumber);
         if (patent) {
             console.log('✅ Encontrada em window.allPatents');
-            console.log('📋 Patente:', {
-                number: patent.publication_number,
-                title: patent.title?.substring(0, 50),
-                jurisdiction: patent.jurisdiction,
-                status: patent.legal_status
-            });
         }
     }
     
     // Fallback to currentResults
-    if (!patent && currentResults?.search_result?.patents) {
-        console.log('🔎 Procurando em currentResults.search_result.patents...');
-        patent = currentResults.search_result.patents.find(p => p.publication_number === publicationNumber);
+    if (!patent && currentResults?.patents) {
+        console.log('🔎 Procurando em currentResults.patents...');
+        patent = currentResults.patents.find(p => p.publication_number === publicationNumber);
         if (patent) {
-            console.log('✅ Encontrada em currentResults.search_result.patents');
+            console.log('✅ Encontrada em currentResults.patents');
         }
     }
     
@@ -2347,26 +2314,11 @@ window.viewPatentDetails = function(publicationNumber) {
             
             <!-- Links -->
             <div style="background: #0f172a; padding: 20px; border-radius: 12px;">
-                <h3 style="color: #60a5fa; margin-top: 0;"><i class="fas fa-link"></i> Links Externos</h3>
+                <h3 style="color: #60a5fa; margin-top: 0;">Links Externos</h3>
                 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                    ${patent.source_url ? `
-                        <a href="${patent.source_url}" target="_blank" style="
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            color: white;
-                            padding: 10px 20px;
-                            border-radius: 8px;
-                            text-decoration: none;
-                            display: inline-flex;
-                            align-items: center;
-                            gap: 8px;
-                            font-weight: 600;
-                        ">
-                            <i class="fas fa-file-alt"></i> Ver Patente Original
-                        </a>
-                    ` : ''}
                     ${patent.espacenet_url ? `
                         <a href="${patent.espacenet_url}" target="_blank" style="
-                            background: #8b5cf6;
+                            background: #3b82f6;
                             color: white;
                             padding: 10px 20px;
                             border-radius: 8px;
@@ -2380,7 +2332,7 @@ window.viewPatentDetails = function(publicationNumber) {
                     ` : ''}
                     ${patent.google_patents_url ? `
                         <a href="${patent.google_patents_url}" target="_blank" style="
-                            background: #ef4444;
+                            background: #3b82f6;
                             color: white;
                             padding: 10px 20px;
                             border-radius: 8px;
@@ -2404,20 +2356,6 @@ window.viewPatentDetails = function(publicationNumber) {
                             gap: 8px;
                         ">
                             <i class="fas fa-external-link-alt"></i> WIPO
-                        </a>
-                    ` : ''}
-                    ${!patent.source_url && !patent.google_patents_url && patent.publication_number ? `
-                        <a href="https://patents.google.com/patent/${patent.publication_number}/en" target="_blank" style="
-                            background: #ef4444;
-                            color: white;
-                            padding: 10px 20px;
-                            border-radius: 8px;
-                            text-decoration: none;
-                            display: inline-flex;
-                            align-items: center;
-                            gap: 8px;
-                        ">
-                            <i class="fas fa-external-link-alt"></i> Buscar no Google Patents
                         </a>
                     ` : ''}
                 </div>
