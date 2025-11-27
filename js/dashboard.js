@@ -1013,14 +1013,17 @@ function displayMoleculeCard(molecule) {
     if (!moleculeCard) return;
     
     moleculeCard.innerHTML = `
+        <h3 class="pd-card-title">
+            <i class="fas fa-atom"></i> Informações da Molécula
+        </h3>
         <div class="molecule-header">
-            <h3>${molecule.generic_name || molecule.molecule_name}</h3>
+            <h4>${molecule.generic_name || molecule.molecule_name}</h4>
             ${molecule.commercial_name ? `<span class="molecule-subtitle">${molecule.commercial_name}</span>` : ''}
         </div>
         <div class="molecule-details">
             <div class="detail-row">
                 <span class="detail-label">Nome IUPAC:</span>
-                <span class="detail-value">${truncateText(molecule.iupac_name || '-', 60)}</span>
+                <span class="detail-value">${truncateText(molecule.iupac_name || '-', 80)}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Fórmula Molecular:</span>
@@ -1036,7 +1039,8 @@ function displayMoleculeCard(molecule) {
             </div>
             ${molecule.structure_2d_url ? `
                 <div class="molecule-structure">
-                    <img src="${molecule.structure_2d_url}" alt="Estrutura 2D" />
+                    <h5 style="margin-bottom: 10px;">Estrutura 2D</h5>
+                    <img src="${molecule.structure_2d_url}" alt="Estrutura 2D" style="max-width: 100%; border-radius: 8px;" />
                 </div>
             ` : ''}
         </div>
@@ -1166,7 +1170,20 @@ function displayPatentsTable(patents, isFiltering = false) {
             <td>${patent.jurisdiction || '-'}</td>
             <td><span class="status-badge status-${getStatusClass(patent.legal_status)}">${patent.legal_status || 'Unknown'}</span></td>
             <td>
-                <button class="btn btn-primary btn-small" onclick="viewPatentDetails('${patent.publication_number}')">Ver</button>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <button class="btn btn-primary btn-small" onclick="viewPatentDetails('${patent.publication_number}')" title="Ver detalhes">
+                        <i class="fas fa-eye"></i> Ver
+                    </button>
+                    ${patent.source_url || patent.google_patents_url ? `
+                        <a href="${patent.source_url || patent.google_patents_url || `https://patents.google.com/patent/${patent.publication_number}/en`}" 
+                           target="_blank" 
+                           class="btn btn-secondary btn-small" 
+                           title="Abrir patente original"
+                           style="padding: 8px 12px; text-decoration: none;">
+                            <i class="fas fa-external-link-alt"></i>
+                        </a>
+                    ` : ''}
+                </div>
             </td>
         `;
         tbody.appendChild(row);
@@ -1323,12 +1340,16 @@ async function loadUserHistory() {
         // Pega apenas os 10 mais recentes
         const recentSearches = searches.slice(0, 10);
         
-        recentSearches.forEach(data => {
+        recentSearches.forEach((data, index) => {
             const item = document.createElement('div');
             item.className = 'history-item';
+            
+            const miniViewerId = `mini-viewer-${data.id || index}`;
+            
             item.innerHTML = `
-                <div class="history-molecule-icon">
-                    <i class="fas fa-atom" style="font-size: 32px; color: white;"></i>
+                <div class="history-molecule-icon" id="icon-${miniViewerId}">
+                    <div id="${miniViewerId}" class="mini-3d-viewer"></div>
+                    <i class="fas fa-atom mini-fallback-icon" style="font-size: 32px; color: white; display: none;"></i>
                 </div>
                 <div class="history-content">
                     <h4>${data.moleculeName}</h4>
@@ -1341,6 +1362,81 @@ async function loadUserHistory() {
                 </button>
             `;
             historyList.appendChild(item);
+            
+            // Try to load 3D molecule (with timeout)
+            if (data.resultData?.molecule_info && window.$3Dmol) {
+                setTimeout(() => {
+                    const miniViewer = document.getElementById(miniViewerId);
+                    const fallbackIcon = document.querySelector(`#icon-${miniViewerId} .mini-fallback-icon`);
+                    
+                    if (!miniViewer) {
+                        if (fallbackIcon) fallbackIcon.style.display = 'block';
+                        return;
+                    }
+                    
+                    try {
+                        const viewer = $3Dmol.createViewer(miniViewer, {
+                            backgroundColor: 'rgba(0,0,0,0)',
+                            defaultcolors: $3Dmol.rasmolElementColors
+                        });
+                        
+                        // Try to load from SMILES or CAS
+                        const moleculeData = data.resultData.molecule_info;
+                        let loadAttempted = false;
+                        
+                        if (moleculeData.smiles) {
+                            loadAttempted = true;
+                            $3Dmol.download('pdb:' + moleculeData.smiles, viewer, {}, function() {
+                                viewer.setStyle({}, {stick: {colorscheme: 'Jmol', radius: 0.15}});
+                                viewer.zoomTo();
+                                viewer.zoom(0.7);
+                                viewer.render();
+                                
+                                // Slow rotation animation
+                                let angle = 0;
+                                const rotationInterval = setInterval(() => {
+                                    if (!document.getElementById(miniViewerId)) {
+                                        clearInterval(rotationInterval);
+                                        return;
+                                    }
+                                    angle += 0.5;
+                                    viewer.rotate(0.5, 'y');
+                                    viewer.render();
+                                }, 50);
+                            }, function(error) {
+                                // On error, show fallback icon
+                                if (fallbackIcon) {
+                                    fallbackIcon.style.display = 'block';
+                                    miniViewer.style.display = 'none';
+                                }
+                            });
+                        }
+                        
+                        // Fallback timeout (3 seconds)
+                        setTimeout(() => {
+                            if (!loadAttempted || !viewer.getModel(0)) {
+                                if (fallbackIcon) {
+                                    fallbackIcon.style.display = 'block';
+                                    miniViewer.style.display = 'none';
+                                }
+                            }
+                        }, 3000);
+                        
+                    } catch (error) {
+                        console.error('Error creating mini 3D viewer:', error);
+                        if (fallbackIcon) {
+                            fallbackIcon.style.display = 'block';
+                            miniViewer.style.display = 'none';
+                        }
+                    }
+                }, index * 200); // Stagger loading
+            } else {
+                // No 3D data, show fallback immediately
+                const fallbackIcon = document.querySelector(`#icon-${miniViewerId} .mini-fallback-icon`);
+                if (fallbackIcon) {
+                    fallbackIcon.style.display = 'block';
+                }
+            }
         });
         
     } catch (error) {
@@ -2094,6 +2190,57 @@ function addFullscreenListener() {
     }
 }
 
+// Calculate Patent Cliff (expiry date and years remaining)
+function calculatePatentCliff(filingDate) {
+    if (!filingDate) {
+        return {
+            expiryDate: 'N/A',
+            yearsRemaining: 'N/A',
+            status: 'unknown',
+            message: 'Data de depósito não disponível'
+        };
+    }
+    
+    try {
+        const filing = new Date(filingDate);
+        const expiry = new Date(filing);
+        expiry.setFullYear(expiry.getFullYear() + 20); // Patents last 20 years
+        
+        const today = new Date();
+        const yearsRemaining = (expiry - today) / (1000 * 60 * 60 * 24 * 365.25);
+        
+        let status, message;
+        if (yearsRemaining < 0) {
+            status = 'expired';
+            message = `Expirada há ${Math.abs(yearsRemaining).toFixed(1)} anos`;
+        } else if (yearsRemaining < 2) {
+            status = 'critical';
+            message = `⚠️ CRÍTICO: Expira em ${yearsRemaining.toFixed(1)} anos`;
+        } else if (yearsRemaining < 5) {
+            status = 'warning';
+            message = `⚠️ Próximo do vencimento: ${yearsRemaining.toFixed(1)} anos`;
+        } else {
+            status = 'active';
+            message = `Ativa: ${yearsRemaining.toFixed(1)} anos restantes`;
+        }
+        
+        return {
+            expiryDate: expiry.toISOString().split('T')[0],
+            yearsRemaining: yearsRemaining.toFixed(1),
+            status,
+            message
+        };
+    } catch (error) {
+        console.error('Error calculating patent cliff:', error);
+        return {
+            expiryDate: 'N/A',
+            yearsRemaining: 'N/A',
+            status: 'unknown',
+            message: 'Erro ao calcular vencimento'
+        };
+    }
+}
+
 // Patent details modal
 window.viewPatentDetails = function(publicationNumber) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -2314,11 +2461,27 @@ window.viewPatentDetails = function(publicationNumber) {
             
             <!-- Links -->
             <div style="background: #0f172a; padding: 20px; border-radius: 12px;">
-                <h3 style="color: #60a5fa; margin-top: 0;">Links Externos</h3>
+                <h3 style="color: #60a5fa; margin-top: 0;"><i class="fas fa-link"></i> Links Externos</h3>
                 <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    ${patent.source_url ? `
+                        <a href="${patent.source_url}" target="_blank" style="
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            padding: 12px 24px;
+                            border-radius: 8px;
+                            text-decoration: none;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 8px;
+                            font-weight: 600;
+                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+                        ">
+                            <i class="fas fa-file-alt"></i> Ver Patente Original
+                        </a>
+                    ` : ''}
                     ${patent.espacenet_url ? `
                         <a href="${patent.espacenet_url}" target="_blank" style="
-                            background: #3b82f6;
+                            background: #8b5cf6;
                             color: white;
                             padding: 10px 20px;
                             border-radius: 8px;
@@ -2332,7 +2495,7 @@ window.viewPatentDetails = function(publicationNumber) {
                     ` : ''}
                     ${patent.google_patents_url ? `
                         <a href="${patent.google_patents_url}" target="_blank" style="
-                            background: #3b82f6;
+                            background: #ef4444;
                             color: white;
                             padding: 10px 20px;
                             border-radius: 8px;
@@ -2356,6 +2519,20 @@ window.viewPatentDetails = function(publicationNumber) {
                             gap: 8px;
                         ">
                             <i class="fas fa-external-link-alt"></i> WIPO
+                        </a>
+                    ` : ''}
+                    ${!patent.source_url && !patent.google_patents_url && patent.publication_number ? `
+                        <a href="https://patents.google.com/patent/${patent.publication_number}/en" target="_blank" style="
+                            background: #ef4444;
+                            color: white;
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            text-decoration: none;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 8px;
+                        ">
+                            <i class="fas fa-search"></i> Buscar no Google Patents
                         </a>
                     ` : ''}
                 </div>
