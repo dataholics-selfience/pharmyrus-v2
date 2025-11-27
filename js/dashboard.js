@@ -925,11 +925,6 @@ function displayResults(data) {
         render3DMolecule(data.search_result.molecule);
     }
     
-    // Prepare P&D tab data
-    if (data.executive_summary) {
-        displayPdTab(data);
-    }
-    
     console.log('✅ Results displayed successfully');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }
@@ -1220,180 +1215,61 @@ function displayFdaInfo(fdaData) {
     const fdaContainer = document.getElementById('fdaInfoContainer');
     if (!fdaContainer) return;
     
-    // Se não houver dados FDA, ocultar o card
-    if (!fdaData || !fdaData.fda_applications || fdaData.fda_applications.length === 0) {
-        fdaContainer.parentElement.style.display = 'none';
-        console.log('⚠️ No FDA data available - hiding FDA card');
-        return;
-    }
+    let html = '<h3>📊 Informações FDA</h3>';
     
-    fdaContainer.parentElement.style.display = 'block';
-    
-    let html = `
-        <h3 class="pd-card-title">
-            <i class="fas fa-capsules"></i> Informações FDA
-        </h3>
-    `;
-    
-    const app = fdaData.fda_applications[0];
-    
-    html += `
-        <div class="fda-application" style="background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-            <div class="info-row" style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #334155;">
-                <span class="info-label" style="color: #94a3b8; font-weight: 600;">Status FDA:</span>
-                <span class="info-value fda-badge" style="
-                    background: ${fdaData.fda_approval_status === 'Approved' ? '#10b981' : '#ef4444'};
-                    color: white;
-                    padding: 4px 12px;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    font-weight: 600;
-                ">${fdaData.fda_approval_status || 'Unknown'}</span>
-            </div>
-            
-            <div class="info-row" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <span class="info-label" style="color: #94a3b8;">Número da Aplicação:</span>
-                <span class="info-value" style="color: #e2e8f0; font-weight: 500;">${app.application_number || '-'}</span>
-            </div>
-            
-            <div class="info-row" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <span class="info-label" style="color: #94a3b8;">Sponsor:</span>
-                <span class="info-value" style="color: #e2e8f0; font-weight: 500;">${app.sponsor_name || fdaData.sponsor || '-'}</span>
-            </div>
-            
-            ${app.openfda ? `
-                <div class="info-row" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span class="info-label" style="color: #94a3b8;">Nome Comercial:</span>
-                    <span class="info-value" style="color: #60a5fa; font-weight: 600;">${app.openfda.brand_name ? app.openfda.brand_name[0] : '-'}</span>
-                </div>
-                
-                <div class="info-row" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span class="info-label" style="color: #94a3b8;">Via de Administração:</span>
-                    <span class="info-value" style="color: #e2e8f0;">${app.openfda.route ? app.openfda.route.join(', ') : '-'}</span>
-                </div>
-                
-                ${app.openfda.generic_name ? `
-                    <div class="info-row" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span class="info-label" style="color: #94a3b8;">Nome Genérico:</span>
-                        <span class="info-value" style="color: #e2e8f0;">${app.openfda.generic_name[0]}</span>
-                    </div>
-                ` : ''}
-                
-                ${app.openfda.manufacturer_name ? `
-                    <div class="info-row" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span class="info-label" style="color: #94a3b8;">Fabricante:</span>
-                        <span class="info-value" style="color: #e2e8f0;">${app.openfda.manufacturer_name[0]}</span>
-                    </div>
-                ` : ''}
-                
-                ${app.openfda.pharm_class_moa ? `
-                    <div class="info-row" style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span class="info-label" style="color: #94a3b8;">Mecanismo de Ação:</span>
-                        <span class="info-value" style="color: #e2e8f0; font-size: 13px;">${app.openfda.pharm_class_moa[0]}</span>
-                    </div>
-                ` : ''}
-            ` : ''}
-        </div>
-    `;
-    
-    // Approval info
-    if (fdaData.approval_date || fdaData.approval_type) {
+    if (fdaData.fda_applications && fdaData.fda_applications.length > 0) {
+        const app = fdaData.fda_applications[0];
+        
         html += `
-            <div style="background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                <h4 style="color: #60a5fa; margin: 0 0 10px 0; font-size: 16px;">
-                    <i class="fas fa-check-circle"></i> Aprovação
-                </h4>
-                ${fdaData.approval_date ? `
-                    <div class="info-row" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span class="info-label" style="color: #94a3b8;">Data de Aprovação:</span>
-                        <span class="info-value" style="color: #e2e8f0;">${fdaData.approval_date}</span>
+            <div class="fda-application">
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span class="info-value fda-badge fda-approved">${fdaData.fda_approval_status}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Número da Aplicação:</span>
+                    <span class="info-value">${app.application_number}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Sponsor:</span>
+                    <span class="info-value">${app.sponsor_name}</span>
+                </div>
+                ${app.openfda ? `
+                    <div class="info-row">
+                        <span class="info-label">Nome Comercial:</span>
+                        <span class="info-value">${app.openfda.brand_name ? app.openfda.brand_name[0] : '-'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Via de Administração:</span>
+                        <span class="info-value">${app.openfda.route ? app.openfda.route[0] : '-'}</span>
                     </div>
                 ` : ''}
-                ${fdaData.approval_type ? `
-                    <div class="info-row" style="display: flex; justify-content: space-between;">
-                        <span class="info-label" style="color: #94a3b8;">Tipo de Aprovação:</span>
-                        <span class="info-value" style="color: #e2e8f0;">${fdaData.approval_type}</span>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
-    
-    // Indications
-    if (fdaData.indications && fdaData.indications.length > 0) {
-        html += `
-            <div style="background: #0f172a; padding: 15px; border-radius: 8px;">
-                <h4 style="color: #60a5fa; margin: 0 0 10px 0; font-size: 16px;">
-                    <i class="fas fa-file-medical"></i> Indicações
-                </h4>
-                <p style="color: #e2e8f0; font-size: 14px; line-height: 1.6; margin: 0;">
-                    ${fdaData.indications[0].substring(0, 300)}${fdaData.indications[0].length > 300 ? '...' : ''}
-                </p>
             </div>
         `;
     }
     
     fdaContainer.innerHTML = html;
-    console.log('✅ FDA info displayed');
 }
 
 function displayClinicalTrials(trialsData) {
     const trialsContainer = document.getElementById('clinicalTrialsContainer');
     if (!trialsContainer) return;
     
-    // Se não houver dados, ocultar o card
-    if (!trialsData || !trialsData.trial_details || trialsData.trial_details.length === 0) {
-        trialsContainer.parentElement.style.display = 'none';
-        console.log('⚠️ No clinical trials data available - hiding trials card');
-        return;
-    }
-    
-    trialsContainer.parentElement.style.display = 'block';
-    
-    let html = `
-        <h3 class="pd-card-title">
-            <i class="fas fa-vial"></i> Ensaios Clínicos
-        </h3>
-        <div style="background: #0f172a; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-            <p style="color: #94a3b8; margin: 0;">
-                Total de ensaios: <strong style="color: #60a5fa; font-size: 18px;">${trialsData.total_trials || trialsData.trial_details.length}</strong>
-            </p>
-        </div>
-    `;
+    let html = '<h3>🧪 Ensaios Clínicos</h3>';
+    html += `<p class="trials-summary">Total de ensaios: <strong>${trialsData.total_trials}</strong></p>`;
     
     if (trialsData.trial_details && trialsData.trial_details.length > 0) {
-        html += '<div class="trials-list" style="display: flex; flex-direction: column; gap: 12px;">';
+        html += '<div class="trials-list">';
         
         trialsData.trial_details.slice(0, 10).forEach(trial => {
-            const phaseColor = trial.phase?.includes('3') ? '#10b981' : 
-                              trial.phase?.includes('2') ? '#f59e0b' : 
-                              trial.phase?.includes('1') ? '#3b82f6' : '#64748b';
-            
             html += `
-                <div style="background: #0f172a; padding: 15px; border-radius: 8px; border-left: 3px solid ${phaseColor};">
-                    <h4 style="color: #e2e8f0; margin: 0 0 10px 0; font-size: 15px; line-height: 1.4;">
-                        ${truncateText(trial.title || 'Sem título', 100)}
-                    </h4>
-                    <div style="display: flex; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
-                        <span style="
-                            background: ${phaseColor};
-                            color: white;
-                            padding: 4px 10px;
-                            border-radius: 6px;
-                            font-size: 12px;
-                            font-weight: 600;
-                        ">${trial.phase || 'N/A'}</span>
-                        <span style="
-                            background: #334155;
-                            color: #e2e8f0;
-                            padding: 4px 10px;
-                            border-radius: 6px;
-                            font-size: 12px;
-                        ">${trial.overall_status || 'Unknown'}</span>
+                <div class="trial-item">
+                    <h4>${truncateText(trial.title || 'Sem título', 80)}</h4>
+                    <div class="trial-meta">
+                        <span class="trial-badge">${trial.phase || 'N/A'}</span>
+                        <span class="trial-status">${trial.overall_status || 'Unknown'}</span>
                     </div>
-                    <p style="color: #94a3b8; font-size: 13px; margin: 0;">
-                        <i class="fas fa-id-card"></i> NCT ID: <span style="color: #60a5fa;">${trial.nct_id}</span>
-                    </p>
+                    <p class="trial-id">NCT ID: ${trial.nct_id}</p>
                 </div>
             `;
         });
@@ -1402,8 +1278,6 @@ function displayClinicalTrials(trialsData) {
     }
     
     trialsContainer.innerHTML = html;
-    console.log('✅ Clinical trials displayed');
-}
 }
 
 async function saveSearchToHistory(moleculeName, data) {
@@ -1470,9 +1344,12 @@ async function loadUserHistory() {
             const item = document.createElement('div');
             item.className = 'history-item';
             
+            const miniViewerId = `mini-viewer-${data.id || index}`;
+            
             item.innerHTML = `
-                <div class="history-molecule-icon animated-atom">
-                    <i class="fas fa-atom" style="font-size: 36px; color: white;"></i>
+                <div class="history-molecule-icon" id="icon-${miniViewerId}">
+                    <div id="${miniViewerId}" class="mini-3d-viewer"></div>
+                    <i class="fas fa-atom mini-fallback-icon" style="font-size: 32px; color: white; display: none;"></i>
                 </div>
                 <div class="history-content">
                     <h4>${data.moleculeName}</h4>
@@ -1485,6 +1362,81 @@ async function loadUserHistory() {
                 </button>
             `;
             historyList.appendChild(item);
+            
+            // Try to load 3D molecule (with timeout)
+            if (data.resultData?.molecule_info && window.$3Dmol) {
+                setTimeout(() => {
+                    const miniViewer = document.getElementById(miniViewerId);
+                    const fallbackIcon = document.querySelector(`#icon-${miniViewerId} .mini-fallback-icon`);
+                    
+                    if (!miniViewer) {
+                        if (fallbackIcon) fallbackIcon.style.display = 'block';
+                        return;
+                    }
+                    
+                    try {
+                        const viewer = $3Dmol.createViewer(miniViewer, {
+                            backgroundColor: 'rgba(0,0,0,0)',
+                            defaultcolors: $3Dmol.rasmolElementColors
+                        });
+                        
+                        // Try to load from SMILES or CAS
+                        const moleculeData = data.resultData.molecule_info;
+                        let loadAttempted = false;
+                        
+                        if (moleculeData.smiles) {
+                            loadAttempted = true;
+                            $3Dmol.download('pdb:' + moleculeData.smiles, viewer, {}, function() {
+                                viewer.setStyle({}, {stick: {colorscheme: 'Jmol', radius: 0.15}});
+                                viewer.zoomTo();
+                                viewer.zoom(0.7);
+                                viewer.render();
+                                
+                                // Slow rotation animation
+                                let angle = 0;
+                                const rotationInterval = setInterval(() => {
+                                    if (!document.getElementById(miniViewerId)) {
+                                        clearInterval(rotationInterval);
+                                        return;
+                                    }
+                                    angle += 0.5;
+                                    viewer.rotate(0.5, 'y');
+                                    viewer.render();
+                                }, 50);
+                            }, function(error) {
+                                // On error, show fallback icon
+                                if (fallbackIcon) {
+                                    fallbackIcon.style.display = 'block';
+                                    miniViewer.style.display = 'none';
+                                }
+                            });
+                        }
+                        
+                        // Fallback timeout (3 seconds)
+                        setTimeout(() => {
+                            if (!loadAttempted || !viewer.getModel(0)) {
+                                if (fallbackIcon) {
+                                    fallbackIcon.style.display = 'block';
+                                    miniViewer.style.display = 'none';
+                                }
+                            }
+                        }, 3000);
+                        
+                    } catch (error) {
+                        console.error('Error creating mini 3D viewer:', error);
+                        if (fallbackIcon) {
+                            fallbackIcon.style.display = 'block';
+                            miniViewer.style.display = 'none';
+                        }
+                    }
+                }, index * 200); // Stagger loading
+            } else {
+                // No 3D data, show fallback immediately
+                const fallbackIcon = document.querySelector(`#icon-${miniViewerId} .mini-fallback-icon`);
+                if (fallbackIcon) {
+                    fallbackIcon.style.display = 'block';
+                }
+            }
         });
         
     } catch (error) {
