@@ -3,87 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pharmyrus v32.0 - Dashboard</title>
+    <title>Pharmyrus v2 - Dashboard de Patentes Farmacêuticas</title>
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- 3Dmol.js for molecule visualization -->
     <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
-    <style>
-        /* Form Styles */
-        .search-form-container {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin: 20px 0;
-        }
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-        .form-group label {
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #374151;
-            font-size: 14px;
-        }
-        .form-group input {
-            padding: 12px 16px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        .form-help {
-            margin-top: 4px;
-            font-size: 12px;
-            color: #6b7280;
-        }
-        .btn-search {
-            width: 100%;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: 600;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .btn-search:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
 </head>
 <body>
-    <!-- Navbar -->
+    <!-- Navbar with Search -->
     <nav class="navbar">
         <div class="nav-brand">
             <img src="images/logo.png" alt="Pharmyrus" class="logo-navbar">
         </div>
+        
+        <!-- Search in Header -->
+        <div class="nav-search">
+            <form id="searchForm" class="header-search-form">
+                <input 
+                    type="text" 
+                    id="moleculeName" 
+                    name="moleculeName"
+                    placeholder="Digite o nome da molécula..."
+                    required
+                    autocomplete="off"
+                    class="header-search-input"
+                    style="margin-right: 8px;"
+                >
+                <input 
+                    type="text" 
+                    id="brandName" 
+                    name="brandName"
+                    placeholder="Nome comercial (opcional)"
+                    autocomplete="off"
+                    class="header-search-input"
+                    style="margin-right: 8px; width: 200px;"
+                >
+                <button type="submit" class="btn btn-primary header-search-btn">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+            </form>
+        </div>
+        
         <div class="nav-menu">
-            <button id="downloadJsonBtn" class="btn btn-secondary hidden">
-                <i class="fas fa-download"></i> JSON
+            <button id="downloadJsonBtn" class="btn btn-secondary hidden" style="background: #8b5cf6;">
+                <i class="fas fa-download"></i> JSON Debug
             </button>
             <button id="adminBtn" class="btn btn-admin hidden">
-                <i class="fas fa-cog"></i> Admin
+                <i class="fas fa-cog"></i> Painel Admin
             </button>
             <span id="userName" class="user-name"></span>
             <button id="logoutBtn" class="btn btn-secondary">
@@ -92,81 +59,43 @@
         </div>
     </nav>
 
-    <!-- Loading Overlay -->
+    <!-- Loading Animation Overlay -->
     <div id="loadingAnimation" class="loading-overlay hidden"></div>
 
-    <!-- Main Container -->
+    <!-- Main Dashboard Container -->
     <div class="dashboard-container">
         
-        <!-- Tabs -->
+        <!-- Tabs Navigation -->
         <div class="tabs">
             <button class="tab-btn active" data-tab="consulta">
-                <i class="fas fa-search"></i> Consulta
+                <i class="fas fa-search"></i> Consulta de Patentes
             </button>
-            <button class="tab-btn" data-tab="resultados">
-                <i class="fas fa-chart-bar"></i> Resultados
-            </button>
-            <button class="tab-btn" data-tab="cliff">
+            <button class="tab-btn" data-tab="historico">
                 <i class="fas fa-chart-line"></i> Patent Cliff
+            </button>
+            <button class="tab-btn" data-tab="pd">
+                <i class="fas fa-flask"></i> P&D
             </button>
         </div>
 
-        <!-- TAB: CONSULTA -->
+        <!-- TAB 1: CONSULTA DE PATENTES -->
         <div id="consultaTab" class="tab-content active">
-            
-            <!-- Search Form -->
-            <div class="search-form-container">
-                <h2 style="margin-bottom: 20px; color: #1f2937;">
-                    <i class="fas fa-search"></i> Buscar Patentes
-                </h2>
-                
-                <form id="searchForm" class="search-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="moleculeName">
-                                Nome da Molécula *
-                            </label>
-                            <input 
-                                type="text" 
-                                id="moleculeName" 
-                                name="moleculeName"
-                                placeholder="Ex: darolutamide"
-                                required
-                            >
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="brandName">
-                                Nome Comercial (opcional)
-                            </label>
-                            <input 
-                                type="text" 
-                                id="brandName" 
-                                name="brandName"
-                                placeholder="Ex: Nubeqa"
-                            >
-                            <small class="form-help">Deixe em branco se não souber</small>
-                        </div>
-                    </div>
-                    
-                    <button type="submit" class="btn-search">
-                        <i class="fas fa-search"></i> Buscar Patentes
-                    </button>
-                </form>
-            </div>
 
-            <!-- Welcome Content -->
+            <!-- Welcome/Institutional Content -->
             <div id="welcomeContent" class="welcome-content">
                 <div class="welcome-hero">
-                    <h1 class="welcome-title">
-                        <i class="fas fa-microscope"></i> Pharmyrus v32.0
-                    </h1>
-                    <p class="welcome-subtitle">
-                        Plataforma de Inteligência em Patentes Farmacêuticas
-                    </p>
-                    <p class="welcome-description">
-                        Consulte patentes globais com análise integrada de WIPO, EPO, INPI e Google Patents.
-                    </p>
+                    <div class="welcome-text">
+                        <h1 class="welcome-title">
+                            <i class="fas fa-microscope"></i>
+                            Pharmyrus v2
+                        </h1>
+                        <p class="welcome-subtitle">
+                            Plataforma de Inteligência em Patentes Farmacêuticas
+                        </p>
+                        <p class="welcome-description">
+                            Consulte patentes globais com análise integrada de múltiplas bases de dados internacionais incluindo WIPO, USPTO, EPO, INPI e FDA Orange Book.
+                        </p>
+                    </div>
                 </div>
 
                 <div class="features-grid">
@@ -174,88 +103,362 @@
                         <div class="feature-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                             <i class="fas fa-database"></i>
                         </div>
-                        <h3>Múltiplas Bases</h3>
-                        <p>WIPO, EPO, INPI e Google Patents integrados</p>
+                        <h3 class="feature-title">Múltiplas Bases</h3>
+                        <p class="feature-description">
+                            Acesso integrado a WIPO, USPTO, EPO, INPI e Google Patents em uma única consulta.
+                        </p>
                     </div>
+
                     <div class="feature-card">
                         <div class="feature-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                            <i class="fas fa-globe"></i>
-                        </div>
-                        <h3>Cobertura Global</h3>
-                        <p>Busca em patentes brasileiras e internacionais</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                             <i class="fas fa-chart-line"></i>
                         </div>
-                        <h3>Patent Cliff</h3>
-                        <p>Análise de expiração e riscos de mercado</p>
+                        <h3 class="feature-title">Patent Cliff</h3>
+                        <p class="feature-description">
+                            Cálculo automático de vencimento de patentes para análise de oportunidades de mercado.
+                        </p>
                     </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <i class="fas fa-cube"></i>
+                        </div>
+                        <h3 class="feature-title">Visualização 3D</h3>
+                        <p class="feature-description">
+                            Estrutura molecular em 3D interativa com múltiplos estilos de renderização.
+                        </p>
+                    </div>
+
                     <div class="feature-card">
                         <div class="feature-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                            <i class="fas fa-bolt"></i>
+                            <i class="fas fa-flask"></i>
                         </div>
-                        <h3>Tempo Real</h3>
-                        <p>Resultados atualizados e processamento rápido</p>
+                        <h3 class="feature-title">Dados de P&D</h3>
+                        <p class="feature-description">
+                            Informações integradas de PubMed, DrugBank, FDA e ensaios clínicos.
+                        </p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                            <i class="fas fa-filter"></i>
+                        </div>
+                        <h3 class="feature-title">Filtros Avançados</h3>
+                        <p class="feature-description">
+                            Filtre por fonte, tipo, status legal e jurisdição para análise precisa.
+                        </p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                            <i class="fas fa-download"></i>
+                        </div>
+                        <h3 class="feature-title">Relatórios PDF</h3>
+                        <p class="feature-description">
+                            Exporte análises completas em PDF profissional com um clique.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="instructions-box">
+                    <h3 class="instructions-title">
+                        <i class="fas fa-lightbulb"></i>
+                        Como Usar
+                    </h3>
+                    <div class="instructions-steps">
+                        <div class="instruction-step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <strong>Digite o nome da molécula</strong> no campo de busca acima (ex: Paracetamol, Semaglutide, Darolutamide)
+                            </div>
+                        </div>
+                        <div class="instruction-step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <strong>Clique em Buscar</strong> e aguarde a consulta nas bases internacionais (10-15 minutos)
+                            </div>
+                        </div>
+                        <div class="instruction-step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <strong>Analise os resultados</strong> com tabelas, gráficos, visualização 3D e filtros avançados
+                            </div>
+                        </div>
+                        <div class="instruction-step">
+                            <div class="step-number">4</div>
+                            <div class="step-content">
+                                <strong>Exporte relatórios</strong> em PDF ou consulte seu histórico na aba correspondente
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Loading State -->
-            <div id="loadingState" class="loading-state hidden">
-                <div class="loading-spinner"></div>
-                <p id="loadingMessage">Processando busca...</p>
-                <p id="loadingDetails" class="loading-details"></p>
+            <!-- Results Section (Hidden initially) -->
+            <div id="resultsSection" class="results-section hidden">
+                
+                <!-- Executive Summary Cards -->
+                <div class="summary-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-chart-line"></i> Resumo Executivo
+                    </h2>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-icon" style="background: #3b82f6;">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div class="metric-content">
+                                <span class="metric-label">Total de Patentes</span>
+                                <span class="metric-value" id="totalPatents">-</span>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-icon" style="background: #10b981;">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="metric-content">
+                                <span class="metric-label">Famílias de Patentes</span>
+                                <span class="metric-value" id="totalFamilies">-</span>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-icon" style="background: #f59e0b;">
+                                <i class="fas fa-globe"></i>
+                            </div>
+                            <div class="metric-content">
+                                <span class="metric-label">Jurisdições</span>
+                                <div class="jurisdictions-info" id="jurisdictionsInfo">-</div>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <div class="metric-icon" style="background: #8b5cf6;">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="metric-content">
+                                <span class="metric-label">Status FDA</span>
+                                <span class="metric-value" id="fdaStatus">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3D Molecule Viewer -->
+                <div id="molecule3DSection" class="molecule-3d-section hidden">
+                    <div class="molecule-3d-container">
+                        <div id="molecule3DViewer" class="molecule-viewer"></div>
+                        <div class="molecule-controls">
+                            <!-- Zoom controls -->
+                            <div class="zoom-controls">
+                                <button id="zoomOut" title="Zoom Out">
+                                    <i class="fas fa-search-minus"></i>
+                                </button>
+                                <span id="zoomLevel" class="zoom-level">100%</span>
+                                <button id="zoomIn" title="Zoom In">
+                                    <i class="fas fa-search-plus"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Rotation control -->
+                            <button id="rotateToggle" class="btn btn-small btn-primary">
+                                <i class="fas fa-sync-alt"></i> <span id="rotateText">Parar</span>
+                            </button>
+                            
+                            <!-- Reset view -->
+                            <button id="resetView" class="btn btn-small btn-secondary">
+                                <i class="fas fa-redo"></i> Reset
+                            </button>
+                            
+                            <!-- Style buttons -->
+                            <div class="style-buttons">
+                                <button class="style-btn active" data-style="stick">Stick</button>
+                                <button class="style-btn" data-style="sphere">Sphere</button>
+                                <button class="style-btn" data-style="cartoon">Cartoon</button>
+                            </div>
+                        </div>
+                        <div class="molecule-info-footer">
+                            <p id="moleculeFormula" class="formula-text"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Patent Types Distribution -->
+                <div class="chart-section">
+                    <h3 class="section-subtitle">
+                        <i class="fas fa-chart-pie"></i> Distribuição por Tipo de Patente
+                    </h3>
+                    <div id="patentTypesChart" class="chart-container"></div>
+                </div>
+
+                <!-- Patents Table -->
+                <div class="table-section">
+                    <h3 class="section-subtitle">
+                        <i class="fas fa-table"></i> Lista de Patentes
+                    </h3>
+                    
+                    <!-- Filtros -->
+                    <div class="filters-container" style="background: #ffffff; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label style="color: #64748b; font-size: 14px; display: block; margin-bottom: 5px; font-weight: 500;">Busca Textual</label>
+                                <input type="text" id="filterSearch" placeholder="Buscar em títulos..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;">
+                            </div>
+                            <div>
+                                <label style="color: #64748b; font-size: 14px; display: block; margin-bottom: 5px; font-weight: 500;">Fonte</label>
+                                <select id="filterSource" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;">
+                                    <option value="">Todas</option>
+                                    <option value="WIPO">WIPO</option>
+                                    <option value="EPO">EPO</option>
+                                    <option value="USPTO">USPTO</option>
+                                    <option value="Google Patents">Google Patents</option>
+                                    <option value="INPI">INPI</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="color: #64748b; font-size: 14px; display: block; margin-bottom: 5px; font-weight: 500;">Status</label>
+                                <select id="filterStatus" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;">
+                                    <option value="">Todos</option>
+                                    <option value="Active">Ativa</option>
+                                    <option value="Expired">Expirada</option>
+                                    <option value="Pending">Pendente</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="color: #64748b; font-size: 14px; display: block; margin-bottom: 5px; font-weight: 500;">Jurisdição</label>
+                                <input type="text" id="filterJurisdiction" placeholder="Ex: WO, US, BR..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;">
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div>
+                                <label style="color: #64748b; font-size: 14px; display: block; margin-bottom: 5px; font-weight: 500;">Depositante</label>
+                                <input type="text" id="filterApplicant" placeholder="Nome do depositante..." style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;">
+                            </div>
+                            <div>
+                                <label style="color: #64748b; font-size: 14px; display: block; margin-bottom: 5px; font-weight: 500;">Data Início</label>
+                                <input type="date" id="filterDateStart" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;">
+                            </div>
+                            <div>
+                                <label style="color: #64748b; font-size: 14px; display: block; margin-bottom: 5px; font-weight: 500;">Data Fim</label>
+                                <input type="date" id="filterDateEnd" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #334155;">
+                            </div>
+                            <div style="display: flex; align-items: flex-end; gap: 10px;">
+                                <button onclick="applyPatentFilters()" style="flex: 1; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                                    <i class="fas fa-filter"></i> Filtrar
+                                </button>
+                                <button onclick="clearPatentFilters()" style="flex: 1; padding: 8px 16px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                                    <i class="fas fa-times"></i> Limpar
+                                </button>
+                            </div>
+                        </div>
+                        <div id="filterStats" style="margin-top: 15px; color: #64748b; font-size: 14px; font-weight: 500;"></div>
+                    </div>
+                    
+                    <div class="table-wrapper">
+                        <table class="patents-table">
+                            <thead style="background: #ffffff; color: #64748b; font-style: italic;">
+                                <tr>
+                                    <th style="color: #64748b; font-style: italic;">Fonte</th>
+                                    <th style="color: #64748b; font-style: italic;">Número</th>
+                                    <th style="color: #64748b; font-style: italic;">Título</th>
+                                    <th style="color: #64748b; font-style: italic;">Data Prioridade</th>
+                                    <th style="color: #64748b; font-style: italic;">Data Expiração</th>
+                                    <th style="color: #64748b; font-style: italic;">Jurisdição</th>
+                                    <th style="color: #64748b; font-style: italic;">Status</th>
+                                    <th style="color: #64748b; font-style: italic;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="patentsTableBody">
+                                <tr>
+                                    <td colspan="8" class="empty-state">
+                                        Nenhuma patente para exibir
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
 
-        <!-- TAB: RESULTADOS -->
-        <div id="resultadosTab" class="tab-content">
-            <div id="resultsContainer"></div>
+        <!-- TAB 2: PATENT CLIFF -->
+        <div id="historicoTab" class="tab-content">
+            <div class="history-section">
+                <h2 class="page-title">
+                    <i class="fas fa-chart-line"></i> Patent Cliff - Análise de Vencimento
+                </h2>
+                <p class="page-subtitle">
+                    Histórico de consultas com análise de vencimento de patentes e oportunidades de mercado
+                </p>
+                
+                <div id="historyList" class="history-list">
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <p>Nenhuma consulta realizada ainda</p>
+                        <p class="empty-state-subtitle">Suas buscas aparecerão aqui</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- TAB: PATENT CLIFF -->
-        <div id="cliffTab" class="tab-content">
-            <div id="cliffContainer"></div>
+        <!-- TAB 3: P&D (Pesquisa e Desenvolvimento) -->
+        <div id="pdTab" class="tab-content">
+            <div class="pd-section">
+                <h2 class="page-title">
+                    <i class="fas fa-flask"></i> Pesquisa & Desenvolvimento
+                </h2>
+                <p class="page-subtitle">
+                    Análise profunda com dados FDA, ensaios clínicos e famílias de patentes
+                </p>
+                
+                <div class="pd-grid">
+                    
+                    <!-- FDA Information -->
+                    <div class="pd-card">
+                        <div id="fdaInfoContainer" class="pd-content">
+                            <div class="empty-state-small">
+                                <i class="fas fa-search"></i>
+                                <p>Realize uma busca para ver informações FDA</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Molecule Information -->
+                    <div class="pd-card">
+                        <div id="moleculeInfoCard" class="pd-content hidden">
+                            <div class="empty-state-small">
+                                <i class="fas fa-search"></i>
+                                <p>Realize uma busca para ver informações da molécula</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Clinical Trials -->
+                    <div class="pd-card">
+                        <div id="clinicalTrialsContainer" class="pd-content">
+                            <div class="empty-state-small">
+                                <i class="fas fa-search"></i>
+                                <p>Realize uma busca para ver ensaios clínicos</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
         </div>
+
     </div>
 
-    <!-- Firebase -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyBMao7cH6-wCcEbH8lFYlY7MRdOG7AJuYc",
-            authDomain: "pharmyrus-d5a6c.firebaseapp.com",
-            projectId: "pharmyrus-d5a6c",
-            storageBucket: "pharmyrus-d5a6c.firebasestorage.app",
-            messagingSenderId: "530662088478",
-            appId: "1:530662088478:web:53d76ba87e2ef20c925e97"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        window.auth = getAuth(app);
-        window.db = getFirestore(app);
-    </script>
-
-    <!-- Main Script -->
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
+    <!-- App Scripts -->
+    <script src="js/firebase-config.js"></script>
     <script src="js/dashboard.js"></script>
-
-    <!-- Tab Navigation -->
-    <script>
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const tab = btn.dataset.tab;
-                
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-                
-                btn.classList.add('active');
-                document.getElementById(tab + 'Tab').classList.add('active');
-            });
-        });
-    </script>
 </body>
 </html>
