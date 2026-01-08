@@ -9,8 +9,7 @@ let currentResults = null; // For patent details modal
 
 // API Configuration
 // ✅ Backend agora com HTTPS!
-const API_BASE_URL = 'https://core.pharmyrus.com/api/v1';
-
+const API_BASE_URL = 'https://pharmyrus-total31-production-b8b1.up.railway.app';
 // Legacy IP-based endpoint (backup):
 // const API_BASE_URL = 'http://3.238.157.167:8000/api/v1';
 
@@ -236,16 +235,19 @@ async function performSearch() {
         console.log('📤 ETAPA 1: INICIANDO BUSCA ASSÍNCRONA');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
-        const initUrl = `${API_BASE_URL}/search/async?molecule_name=${encodeURIComponent(moleculeName)}`;
-        console.log('🔗 URL:', initUrl);
-        
-        const initResponse = await fetch(initUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        });
+const initUrl = `${API_BASE_URL}/search/async`;
+const requestBody = {
+    nome_molecula: moleculeName,
+    nome_comercial: brandName || '',
+    paises_alvo: ['BR'],
+    incluir_wo: true
+};
+
+const response = await fetch(initUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestBody)
+});
         
         if (!initResponse.ok) {
             const errorText = await initResponse.text().catch(() => 'Sem detalhes');
