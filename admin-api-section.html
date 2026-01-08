@@ -1,0 +1,84 @@
+        <!-- API Configuration Tab -->
+        <div id="apiTab" class="tab-content">
+            <h2>🔧 Configuração da API</h2>
+            
+            <div class="section">
+                <div class="api-config-card">
+                    <h3>URL Base da API</h3>
+                    <p class="text-muted">
+                        Configure o endereço do backend Pharmyrus. 
+                        <strong>Não incluir https://</strong> - será adicionado automaticamente.
+                    </p>
+                    
+                    <form id="apiConfigForm" class="api-form">
+                        <div class="form-group">
+                            <label for="apiBaseUrl">URL da API (sem https://)</label>
+                            <input 
+                                type="text" 
+                                id="apiBaseUrl" 
+                                placeholder="pharmyrus-total31-production-b8b1.up.railway.app"
+                                required
+                                class="api-url-input"
+                            >
+                            <small class="form-help">
+                                Exemplo: pharmyrus-total31-production-b8b1.up.railway.app
+                            </small>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="button" id="testApiBtn" class="btn btn-secondary">
+                                🔍 Testar Conexão
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                💾 Salvar Configuração
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div id="apiTestResult" class="api-test-result hidden">
+                        <!-- Test results will appear here -->
+                    </div>
+                    
+                    <div class="api-info">
+                        <h4>ℹ️ Informações</h4>
+                        <ul>
+                            <li><strong>API Atual:</strong> <code id="currentApiUrl">Carregando...</code></li>
+                            <li><strong>Status:</strong> <span id="apiStatus">🔄 Verificando...</span></li>
+                            <li><strong>Versão:</strong> <span id="apiVersion">-</span></li>
+                            <li><strong>Última atualização:</strong> <span id="apiLastUpdate">-</span></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="api-help">
+                        <details>
+                            <summary>💡 Dicas e Troubleshooting</summary>
+                            <div class="help-content">
+                                <h5>Como usar:</h5>
+                                <ol>
+                                    <li>Cole a URL do backend Railway (sem https://)</li>
+                                    <li>Clique em "Testar Conexão" para verificar</li>
+                                    <li>Se o teste passar, clique em "Salvar"</li>
+                                    <li>Faça logout e login novamente para aplicar</li>
+                                </ol>
+                                
+                                <h5>Troubleshooting:</h5>
+                                <ul>
+                                    <li><strong>Erro CORS:</strong> Verifique se o backend tem CORS configurado</li>
+                                    <li><strong>Timeout:</strong> Backend pode estar em sleep (Railway), aguarde 30s</li>
+                                    <li><strong>404:</strong> Verifique se a URL está correta</li>
+                                    <li><strong>Certificado inválido:</strong> Use apenas HTTPS</li>
+                                </ul>
+                                
+                                <h5>URLs válidas:</h5>
+                                <ul>
+                                    <li>✅ pharmyrus-total31-production-b8b1.up.railway.app</li>
+                                    <li>✅ api.pharmyrus.com</li>
+                                    <li>❌ https://pharmyrus.com (remover https://)</li>
+                                    <li>❌ pharmyrus.com/api (remover paths)</li>
+                                </ul>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </div>

@@ -1,0 +1,29 @@
+<!-- ============================================
+     PHARMYRUS DASHBOARD v32.0 - INTEGRATION PATCH
+     ============================================
+     
+     Adicione estas linhas ao dashboard.html existente:
+     
+     1. No <head>, ANTES de dashboard.js:
+     ============================================ -->
+
+<!-- Normalização e Componentes v32.0 -->
+<script src="js/adapters/patent-normalizer.js"></script>
+<script src="js/components/progress-tracker.js"></script>
+<script src="js/utils/api-config.js"></script>
+<link rel="stylesheet" href="css/components.css">
+
+<!-- ============================================
+     2. Logo após o formulário de busca:
+     ============================================ -->
+
+<!-- Progress Tracker v32.0 -->
+<div id="progressContainer" class="hidden">
+    <!-- Progress tracker renderiza aqui -->
+</div>
+
+<!-- ============================================
+     3. Modificações no dashboard.js:
+     
+     Ver arquivo: dashboard-js-modifications.txt
+     ============================================ -->
