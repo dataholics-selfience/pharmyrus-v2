@@ -1,5 +1,5 @@
 // ============================================
-// PHARMYRUS v32.0 - Dashboard Script
+// PHARMYRUS v32.0 - Dashboard Script FINAL
 // ============================================
 
 console.log('Pharmyrus v32.0 Dashboard loaded');
@@ -9,77 +9,147 @@ console.log('Pharmyrus v32.0 Dashboard loaded');
 // ============================================
 
 const API_BASE_URL = 'https://pharmyrus-total31-production-b8b1.up.railway.app';
-const ADMIN_EMAIL = 'admin@pharmyrus.com';
+const ADMIN_EMAIL = 'daniel.mendes@dataholics.io';  // ← SEU EMAIL
 
 let currentUser = null;
 let currentSearchData = null;
 let pollInterval = null;
+let searchStartTime = null;
 
 // ============================================
-// AUTENTICAÇÃO
+// AGUARDAR FIREBASE CARREGAR
 // ============================================
 
-auth.onAuthStateChanged(async (user) => {
-    if (!user) {
-        window.location.href = 'index.html';
-        return;
-    }
+window.addEventListener('load', function() {
+    console.log('✅ Window loaded, aguardando Firebase...');
     
-    currentUser = user;
-    
-    // Atualizar UI
-    const userNameEl = document.getElementById('userName');
-    if (userNameEl) {
-        userNameEl.textContent = user.displayName || user.email;
-    }
-    
-    // Mostrar botão admin se for admin
-    if (user.email === ADMIN_EMAIL) {
-        const adminBtn = document.getElementById('adminBtn');
-        if (adminBtn) {
-            adminBtn.classList.remove('hidden');
+    // Aguardar auth estar disponível
+    const checkAuth = setInterval(() => {
+        if (window.auth) {
+            clearInterval(checkAuth);
+            console.log('✅ Firebase Auth disponível!');
+            initDashboard();
         }
-    }
+    }, 100);
 });
+
+// ============================================
+// INICIALIZAR DASHBOARD
+// ============================================
+
+function initDashboard() {
+    console.log('🚀 Inicializando dashboard...');
+    
+    // Autenticação
+    auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+            window.location.href = 'index.html';
+            return;
+        }
+        
+        currentUser = user;
+        console.log('👤 Usuário logado:', user.email);
+        
+        // Atualizar UI
+        const userNameEl = document.getElementById('userName');
+        if (userNameEl) {
+            userNameEl.textContent = user.displayName || user.email;
+        }
+        
+        // Mostrar botão admin
+        console.log('🔍 Verificando se é admin...');
+        console.log('Email do usuário:', user.email);
+        console.log('Email admin:', ADMIN_EMAIL);
+        console.log('É admin?', user.email === ADMIN_EMAIL);
+        
+        if (user.email === ADMIN_EMAIL) {
+            const adminBtn = document.getElementById('adminBtn');
+            if (adminBtn) {
+                console.log('✅ Mostrando botão Admin');
+                adminBtn.classList.remove('hidden');
+            }
+        }
+    });
+    
+    // Event Listeners
+    setupEventListeners();
+}
 
 // ============================================
 // EVENT LISTENERS
 // ============================================
 
-// Logout
-document.getElementById('logoutBtn')?.addEventListener('click', async () => {
-    await auth.signOut();
-    window.location.href = 'index.html';
-});
-
-// Admin
-document.getElementById('adminBtn')?.addEventListener('click', () => {
-    window.location.href = 'admin.html';
-});
-
-// Download JSON
-document.getElementById('downloadJsonBtn')?.addEventListener('click', () => {
-    if (!currentSearchData) {
-        alert('Nenhum dado disponível. Faça uma busca primeiro.');
-        return;
+function setupEventListeners() {
+    console.log('🔌 Configurando event listeners...');
+    
+    // Logout
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            await auth.signOut();
+            window.location.href = 'index.html';
+        });
     }
     
-    const dataStr = JSON.stringify(currentSearchData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `pharmyrus-${currentSearchData.metadata?.molecule_name || 'search'}-${Date.now()}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Admin
+    const adminBtn = document.getElementById('adminBtn');
+    if (adminBtn) {
+        adminBtn.addEventListener('click', () => {
+            window.location.href = 'admin.html';
+        });
+    }
     
-    showNotification('✅ JSON baixado com sucesso!', 'success');
-});
-
-// Busca
-document.getElementById('searchForm')?.addEventListener('submit', handleSearch);
+    // Download JSON
+    const downloadJsonBtn = document.getElementById('downloadJsonBtn');
+    if (downloadJsonBtn) {
+        downloadJsonBtn.addEventListener('click', () => {
+            if (!currentSearchData) {
+                alert('Nenhum dado disponível. Faça uma busca primeiro.');
+                return;
+            }
+            
+            const dataStr = JSON.stringify(currentSearchData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `pharmyrus-${currentSearchData.metadata?.molecule_name || 'search'}-${Date.now()}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            alert('✅ JSON baixado com sucesso!');
+        });
+    }
+    
+    // Busca
+    const searchForm = document.getElementById('searchForm');
+    if (searchForm) {
+        searchForm.addEventListener('submit', handleSearch);
+    }
+    
+    // Tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.dataset.tab;
+            
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            const tabContent = document.getElementById(`${tabName}Tab`);
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
+        });
+    });
+    
+    console.log('✅ Event listeners configurados!');
+}
 
 // ============================================
 // BUSCA DE PATENTES
@@ -92,7 +162,7 @@ async function handleSearch(e) {
     const brandName = document.getElementById('brandName').value.trim();
     
     if (!moleculeName) {
-        showNotification('❌ Digite o nome da molécula', 'error');
+        alert('❌ Digite o nome da molécula');
         return;
     }
     
@@ -105,8 +175,13 @@ async function handleSearch(e) {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     // Esconder welcome, mostrar loading
-    hideElement('welcomeContent');
-    showElement('loadingState');
+    const welcomeContent = document.getElementById('welcomeContent');
+    const loadingAnimation = document.getElementById('loadingAnimation');
+    
+    if (welcomeContent) welcomeContent.classList.add('hidden');
+    if (loadingAnimation) loadingAnimation.classList.remove('hidden');
+    
+    searchStartTime = Date.now();
     
     try {
         // Iniciar busca assíncrona
@@ -119,6 +194,7 @@ async function handleSearch(e) {
         };
         
         console.log('📤 Request Body:', JSON.stringify(requestBody, null, 2));
+        console.log('🔗 POST', initUrl);
         
         const response = await fetch(initUrl, {
             method: 'POST',
@@ -144,9 +220,9 @@ async function handleSearch(e) {
         
     } catch (error) {
         console.error('❌ ERRO NA BUSCA:', error);
-        hideElement('loadingState');
-        showElement('welcomeContent');
-        showNotification(`❌ Erro: ${error.message}`, 'error');
+        if (loadingAnimation) loadingAnimation.classList.add('hidden');
+        if (welcomeContent) welcomeContent.classList.remove('hidden');
+        alert(`❌ Erro: ${error.message}\n\nVerifique:\n1. Railway está acordado?\n2. CORS configurado?\n3. URL correta?`);
     }
 }
 
@@ -156,8 +232,6 @@ async function handleSearch(e) {
 
 function startPolling(taskId) {
     console.log('🔄 Iniciando polling para task:', taskId);
-    
-    updateLoadingMessage('🔄 Processando busca...', 'Aguardando resposta da API...');
     
     let pollCount = 0;
     const maxPolls = 900; // 30 minutos (2s interval)
@@ -170,16 +244,12 @@ function startPolling(taskId) {
             const response = await fetch(statusUrl);
             
             if (!response.ok) {
-                throw new Error(`Status check failed: ${response.status}`);
+                console.warn(`⚠️  Status check failed: ${response.status}`);
+                return;
             }
             
             const status = await response.json();
-            console.log(`📊 Poll ${pollCount}:`, status);
-            
-            updateLoadingMessage(
-                `🔄 ${status.status || 'Processando'}...`,
-                status.message || `Tentativa ${pollCount} de ${maxPolls}`
-            );
+            console.log(`📊 Poll ${pollCount}:`, status.status || 'processing');
             
             // Se completou
             if (status.status === 'completed') {
@@ -203,9 +273,11 @@ function startPolling(taskId) {
         } catch (error) {
             clearInterval(pollInterval);
             console.error('❌ Erro no polling:', error);
-            hideElement('loadingState');
-            showElement('welcomeContent');
-            showNotification(`❌ ${error.message}`, 'error');
+            const loadingAnimation = document.getElementById('loadingAnimation');
+            const welcomeContent = document.getElementById('welcomeContent');
+            if (loadingAnimation) loadingAnimation.classList.add('hidden');
+            if (welcomeContent) welcomeContent.classList.remove('hidden');
+            alert(`❌ ${error.message}`);
         }
     }, 2000); // Poll a cada 2 segundos
 }
@@ -216,7 +288,7 @@ function startPolling(taskId) {
 
 async function fetchResults(taskId) {
     try {
-        updateLoadingMessage('📥 Buscando resultados...', 'Carregando dados...');
+        console.log('📥 Buscando resultados...');
         
         const resultUrl = `${API_BASE_URL}/search/async/${taskId}/result`;
         const response = await fetch(resultUrl);
@@ -226,18 +298,30 @@ async function fetchResults(taskId) {
         }
         
         const data = await response.json();
-        console.log('✅ RESULTADOS:', data);
+        console.log('✅ RESULTADOS RECEBIDOS:', data);
         
         currentSearchData = data;
         
-        hideElement('loadingState');
+        const loadingAnimation = document.getElementById('loadingAnimation');
+        if (loadingAnimation) loadingAnimation.classList.add('hidden');
+        
+        // Mostrar botão download
+        const downloadJsonBtn = document.getElementById('downloadJsonBtn');
+        if (downloadJsonBtn) downloadJsonBtn.classList.remove('hidden');
+        
+        // Exibir resultados
         displayResults(data);
+        
+        const duration = Math.round((Date.now() - searchStartTime) / 1000);
+        console.log(`⏱️  Tempo total: ${duration}s`);
         
     } catch (error) {
         console.error('❌ Erro ao buscar resultados:', error);
-        hideElement('loadingState');
-        showElement('welcomeContent');
-        showNotification(`❌ ${error.message}`, 'error');
+        const loadingAnimation = document.getElementById('loadingAnimation');
+        const welcomeContent = document.getElementById('welcomeContent');
+        if (loadingAnimation) loadingAnimation.classList.add('hidden');
+        if (welcomeContent) welcomeContent.classList.remove('hidden');
+        alert(`❌ ${error.message}`);
     }
 }
 
@@ -248,30 +332,28 @@ async function fetchResults(taskId) {
 function displayResults(data) {
     console.log('📊 Exibindo resultados...');
     
-    // Mostrar botão de download JSON
-    const downloadBtn = document.getElementById('downloadJsonBtn');
-    if (downloadBtn) {
-        downloadBtn.classList.remove('hidden');
+    // Mudar para tab de historico (onde ficam os resultados)
+    const historicoTab = document.querySelector('[data-tab="historico"]');
+    if (historicoTab) historicoTab.click();
+    
+    // Inserir resultados na tab historico
+    const historicoTabContent = document.getElementById('historicoTab');
+    if (!historicoTabContent) {
+        console.error('❌ Tab historico não encontrada');
+        return;
     }
-    
-    // Mudar para tab de resultados
-    document.querySelector('[data-tab="resultados"]')?.click();
-    
-    const container = document.getElementById('resultsContainer');
-    if (!container) return;
     
     // Extrair dados
     const metadata = data.metadata || {};
     const summary = data.patent_discovery?.summary || {};
     const patents = data.patent_discovery?.patents_by_country?.BR || [];
-    const families = data.patent_discovery?.patent_families || [];
     
     // Renderizar
-    container.innerHTML = `
-        <div class="results-wrapper">
+    historicoTabContent.innerHTML = `
+        <div style="padding: 20px;">
             <!-- Header -->
-            <div class="results-header">
-                <h2>
+            <div style="margin-bottom: 30px;">
+                <h2 style="font-size: 28px; color: #1f2937; margin: 0;">
                     <i class="fas fa-check-circle" style="color: #10b981;"></i>
                     Busca Completa
                 </h2>
@@ -282,77 +364,51 @@ function displayResults(data) {
             </div>
 
             <!-- Summary Cards -->
-            <div class="summary-cards">
-                <div class="summary-card">
-                    <div class="summary-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                        <i class="fas fa-globe"></i>
-                    </div>
-                    <div class="summary-content">
-                        <h3>${summary.total_wo_patents || 0}</h3>
-                        <p>WO Patents</p>
-                    </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="font-size: 32px; font-weight: 700; color: #667eea;">${summary.total_wo_patents || 0}</div>
+                    <div style="color: #6b7280; font-size: 14px;">WO Patents</div>
                 </div>
-                <div class="summary-card">
-                    <div class="summary-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                        <i class="fas fa-flag"></i>
-                    </div>
-                    <div class="summary-content">
-                        <h3>${summary.total_patents || 0}</h3>
-                        <p>BR Patents</p>
-                    </div>
+                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="font-size: 32px; font-weight: 700; color: #f5576c;">${summary.total_patents || 0}</div>
+                    <div style="color: #6b7280; font-size: 14px;">BR Patents</div>
                 </div>
-                <div class="summary-card">
-                    <div class="summary-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                        <i class="fas fa-database"></i>
-                    </div>
-                    <div class="summary-content">
-                        <h3>${families.length || 0}</h3>
-                        <p>Families</p>
-                    </div>
+                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="font-size: 32px; font-weight: 700; color: #4facfe;">${summary.by_source?.WIPO || 0}</div>
+                    <div style="color: #6b7280; font-size: 14px;">WIPO</div>
                 </div>
-                <div class="summary-card">
-                    <div class="summary-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="summary-content">
-                        <h3>${Math.round(metadata.elapsed_seconds || 0)}s</h3>
-                        <p>Tempo</p>
-                    </div>
+                <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="font-size: 32px; font-weight: 700; color: #43e97b;">${Math.round(metadata.elapsed_seconds || 0)}s</div>
+                    <div style="color: #6b7280; font-size: 14px;">Tempo</div>
                 </div>
             </div>
 
             <!-- Patents Table -->
-            <div class="patents-section">
+            <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 <h3 style="margin-bottom: 16px;">
                     <i class="fas fa-list"></i> Patentes Brasileiras (${patents.length})
                 </h3>
                 
                 ${patents.length > 0 ? `
-                    <div class="patents-table">
-                        <table>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
                             <thead>
-                                <tr>
-                                    <th>Patente</th>
-                                    <th>Título</th>
-                                    <th>Data</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
+                                <tr style="background: #f9fafb;">
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Patente</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Título</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Data</th>
+                                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Links</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${patents.slice(0, 20).map(p => `
-                                    <tr>
-                                        <td><strong>${p.patent_number || 'N/A'}</strong></td>
-                                        <td style="max-width: 300px;">${truncate(p.title || 'N/A', 60)}</td>
-                                        <td>${formatDate(p.filing_date)}</td>
-                                        <td>
-                                            <span class="status-badge ${getStatusClass(p.patent_status)}">
-                                                ${p.patent_status || 'Unknown'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            ${p.link_nacional ? `<a href="${p.link_nacional}" target="_blank" class="btn-link">INPI</a>` : ''}
-                                            ${p.link_espacenet ? `<a href="${p.link_espacenet}" target="_blank" class="btn-link">EPO</a>` : ''}
+                                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                                        <td style="padding: 12px;"><strong>${p.patent_number || 'N/A'}</strong></td>
+                                        <td style="padding: 12px; max-width: 300px;">${truncate(p.title || 'N/A', 60)}</td>
+                                        <td style="padding: 12px;">${formatDate(p.filing_date)}</td>
+                                        <td style="padding: 12px;">
+                                            ${p.link_nacional ? `<a href="${p.link_nacional}" target="_blank" style="padding: 4px 8px; background: #667eea; color: white; text-decoration: none; border-radius: 4px; font-size: 12px; margin-right: 4px;">INPI</a>` : ''}
+                                            ${p.link_espacenet ? `<a href="${p.link_espacenet}" target="_blank" style="padding: 4px 8px; background: #10b981; color: white; text-decoration: none; border-radius: 4px; font-size: 12px;">EPO</a>` : ''}
                                         </td>
                                     </tr>
                                 `).join('')}
@@ -361,7 +417,7 @@ function displayResults(data) {
                     </div>
                     ${patents.length > 20 ? `<p style="text-align: center; color: #6b7280; margin-top: 16px;">Mostrando 20 de ${patents.length} patentes</p>` : ''}
                 ` : `
-                    <div class="empty-state">
+                    <div style="text-align: center; padding: 60px 20px; color: #6b7280;">
                         <i class="fas fa-inbox" style="font-size: 48px; color: #d1d5db;"></i>
                         <p>Nenhuma patente brasileira encontrada</p>
                     </div>
@@ -369,35 +425,16 @@ function displayResults(data) {
             </div>
         </div>
     `;
+    
+    alert('✅ Busca concluída com sucesso!');
 }
 
 // ============================================
 // HELPERS
 // ============================================
 
-function showElement(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.remove('hidden');
-}
-
-function hideElement(id) {
-    const el = document.getElementById(id);
-    if (el) el.classList.add('hidden');
-}
-
-function updateLoadingMessage(title, details) {
-    const titleEl = document.getElementById('loadingMessage');
-    const detailsEl = document.getElementById('loadingDetails');
-    
-    if (titleEl) titleEl.textContent = title;
-    if (detailsEl) detailsEl.textContent = details;
-}
-
-function showNotification(message, type = 'info') {
-    alert(message); // Simplificado - pode melhorar depois
-}
-
 function truncate(str, len) {
+    if (!str) return 'N/A';
     return str.length > len ? str.substring(0, len) + '...' : str;
 }
 
@@ -410,240 +447,4 @@ function formatDate(dateStr) {
     }
 }
 
-function getStatusClass(status) {
-    if (!status) return 'status-unknown';
-    const s = status.toLowerCase();
-    if (s.includes('safe') || s.includes('active')) return 'status-safe';
-    if (s.includes('expir') || s.includes('dead')) return 'status-expired';
-    return 'status-unknown';
-}
-
-// ============================================
-// CSS INLINE (TEMPORÁRIO)
-// ============================================
-
-const style = document.createElement('style');
-style.textContent = `
-    .hidden { display: none !important; }
-    
-    .loading-state {
-        text-align: center;
-        padding: 60px 20px;
-    }
-    
-    .loading-spinner {
-        width: 50px;
-        height: 50px;
-        border: 4px solid #e5e7eb;
-        border-top: 4px solid #667eea;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 20px;
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .loading-details {
-        color: #6b7280;
-        font-size: 14px;
-        margin-top: 8px;
-    }
-    
-    .results-wrapper {
-        padding: 20px;
-    }
-    
-    .results-header h2 {
-        font-size: 28px;
-        color: #1f2937;
-        margin: 0;
-    }
-    
-    .summary-cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin: 30px 0;
-    }
-    
-    .summary-card {
-        background: white;
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        display: flex;
-        align-items: center;
-        gap: 16px;
-    }
-    
-    .summary-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 24px;
-    }
-    
-    .summary-content h3 {
-        font-size: 32px;
-        font-weight: 700;
-        color: #1f2937;
-        margin: 0;
-    }
-    
-    .summary-content p {
-        color: #6b7280;
-        font-size: 14px;
-        margin: 4px 0 0 0;
-    }
-    
-    .patents-section {
-        background: white;
-        border-radius: 12px;
-        padding: 30px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    
-    .patents-table {
-        overflow-x: auto;
-    }
-    
-    .patents-table table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    
-    .patents-table th {
-        background: #f9fafb;
-        padding: 12px;
-        text-align: left;
-        font-weight: 600;
-        color: #374151;
-        border-bottom: 2px solid #e5e7eb;
-    }
-    
-    .patents-table td {
-        padding: 12px;
-        border-bottom: 1px solid #e5e7eb;
-    }
-    
-    .patents-table tr:hover {
-        background: #f9fafb;
-    }
-    
-    .status-badge {
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    
-    .status-safe {
-        background: #d1fae5;
-        color: #065f46;
-    }
-    
-    .status-expired {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-    
-    .status-unknown {
-        background: #e5e7eb;
-        color: #374151;
-    }
-    
-    .btn-link {
-        padding: 4px 12px;
-        background: #667eea;
-        color: white;
-        text-decoration: none;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 600;
-        margin-right: 4px;
-        display: inline-block;
-    }
-    
-    .btn-link:hover {
-        background: #5568d3;
-    }
-    
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: #6b7280;
-    }
-    
-    .welcome-content {
-        padding: 40px 20px;
-    }
-    
-    .welcome-hero {
-        text-align: center;
-        margin-bottom: 40px;
-    }
-    
-    .welcome-title {
-        font-size: 36px;
-        color: #1f2937;
-        margin-bottom: 16px;
-    }
-    
-    .welcome-subtitle {
-        font-size: 20px;
-        color: #6b7280;
-        margin-bottom: 12px;
-    }
-    
-    .welcome-description {
-        font-size: 16px;
-        color: #9ca3af;
-    }
-    
-    .features-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 24px;
-    }
-    
-    .feature-card {
-        background: white;
-        border-radius: 12px;
-        padding: 30px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        text-align: center;
-    }
-    
-    .feature-icon {
-        width: 80px;
-        height: 80px;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 32px;
-        margin: 0 auto 20px;
-    }
-    
-    .feature-card h3 {
-        font-size: 18px;
-        color: #1f2937;
-        margin-bottom: 8px;
-    }
-    
-    .feature-card p {
-        color: #6b7280;
-        font-size: 14px;
-    }
-`;
-document.head.appendChild(style);
-
-console.log('✅ Dashboard ready!');
+console.log('✅ Dashboard script carregado! Aguardando Firebase...');
