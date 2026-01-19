@@ -41,8 +41,8 @@ export function SearchPage() {
       try {
         const result = await executeSearch({ molecule, brand, countries })
         
-        // Redirect to results page
-        navigate('/results', { state: { result } })
+        // Redirect to scientific results page
+        navigate('/results/scientific', { state: { result } })
       } catch (err) {
         console.error('Search failed:', err)
       }

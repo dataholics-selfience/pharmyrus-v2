@@ -107,10 +107,16 @@ export async function pollSearchStatus(
   intervalMs: number = 20000 // 20s como no script
 ): Promise<SearchResult> {
   return new Promise((resolve, reject) => {
+    let retryCount = 0
+    const maxRetries = 3
+    
     const poll = async () => {
       try {
         const status = await getSearchStatus(jobId)
         onProgress(status)
+        
+        // Reset retry count on successful poll
+        retryCount = 0
 
         if (status.status === 'complete') {
           clearInterval(interval)
@@ -120,15 +126,29 @@ export async function pollSearchStatus(
           clearInterval(interval)
           reject(new Error(status.error || 'Search failed'))
         }
-      } catch (error) {
-        clearInterval(interval)
-        reject(error)
+        // If status is 'running', continue polling
+      } catch (error: any) {
+        retryCount++
+        console.warn(`⚠️ Poll attempt ${retryCount}/${maxRetries} failed:`, error.message)
+        
+        // Only reject if we've exceeded max retries
+        if (retryCount >= maxRetries) {
+          clearInterval(interval)
+          reject(new Error(`Polling failed after ${maxRetries} attempts: ${error.message}`))
+        }
+        // Otherwise, continue polling (API might be temporarily unavailable)
       }
     }
 
     // Start polling immediately
     poll()
     const interval = setInterval(poll, intervalMs)
+    
+    // Set overall timeout (15 minutes)
+    setTimeout(() => {
+      clearInterval(interval)
+      reject(new Error('Search timeout - job took longer than 15 minutes'))
+    }, 15 * 60 * 1000)
   })
 }
 
