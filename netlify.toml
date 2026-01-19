@@ -4,6 +4,11 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "18"
-  # Disable secret scanning (Firebase keys are public)
-  SECRETS_SCAN_ENABLED = "false"
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
+  CI = "false"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

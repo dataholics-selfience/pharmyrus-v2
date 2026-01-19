@@ -8,6 +8,7 @@ import { LoginPage } from '@/pages/Login'
 import { SignupPage } from '@/pages/Signup'
 import { SearchPage } from '@/pages/Search'
 import { ResultsPage } from '@/pages/Results'
+import { ResultsScientificPage } from '@/pages/ResultsScientific'
 import { DashboardPage } from '@/pages/Dashboard'
 
 // Providers
@@ -47,6 +48,7 @@ function App() {
             <Route path="/cadastro" element={<SignupPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/results" element={<ResultsPage />} />
+            <Route path="/results/scientific" element={<ResultsScientificPage />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={<DashboardPage />} />
